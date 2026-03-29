@@ -1574,6 +1574,9 @@
   "watchLater": {
     "message": "Watch later"
   },
+  "watchLaterButton": {
+    "message": "Add a 'Watch Later' button to each thumbnail"
+  },
   "watchTime": {
     "message": "Watch time"
   },

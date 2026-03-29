@@ -459,6 +459,56 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	}
 
 /*--------------------------------------------------------------
+# Watch Later Button
+--------------------------------------------------------------*/
+.it-watch-later-button {
+	font-family: inherit;
+
+	position: absolute;
+	z-index: 999 !important;
+	top: 8px;
+	left: 8px;
+	opacity: 0;
+	transition: opacity 4s;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+
+	cursor: pointer;
+
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, .6);
+}
+
+.it-watch-later-button:hover {
+	background: rgba(0, 0, 0, .8);
+}
+
+.it-watch-later-button svg {
+	width: 30px;
+	height: 30px;
+
+	pointer-events: none;
+
+	fill: currentColor;
+}
+
+*:hover>.it-watch-later-button {
+	opacity: 1 !important;
+	transition: opacity 0s;
+}
+
+.it-watch-later-button.it-watch-later-added {
+	color: #2ecc71;
+	background: rgba(0, 0, 0, .8);
+}
+/*--------------------------------------------------------------
 # COMPACT THEME
 --------------------------------------------------------------*/
 html[it-channel-compact-theme='true'] #sections > ytd-guide-section-renderer:nth-child(2) > h3,

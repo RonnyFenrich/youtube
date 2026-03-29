@@ -250,6 +250,10 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'popupWindowButtons',
 				},
+				watch_later_button: {
+					component: 'switch',
+					text: 'watchLaterButton',
+				},
 				hide_thumbnail_overlay: {
 					component: 'switch',
 					text: 'hideThumbnailOverlay',
