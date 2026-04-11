@@ -320,6 +320,9 @@
   "copyVideoId": {
     "message": "📋 Copy Video ID"
   },
+  "removeFromPlaylist": {
+    "message": "🗑️ Remove from playlist"
+  },
   "copyVideoUrl": {
     "message": "Copy Video Full URL"
   },

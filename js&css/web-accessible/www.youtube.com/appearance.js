@@ -568,6 +568,70 @@ ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer = function () {
 				section.insertAdjacentElement('afterend', button)
 			}
 
+			let isPlaylist = location.href.includes('list=');
+			let existingRemoveBtn = document.querySelector('#it-below-player-remove-from-playlist');
+
+			if (this.storage.remove_from_playlist === true && isPlaylist) {
+				if (!existingRemoveBtn) {
+					var button = document.createElement('button');
+					button.className = 'yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading yt-spec-button-shape-next--enable-backdrop-filter-experiment improvedtube-remove-btn';
+					button.id = 'it-below-player-remove-from-playlist';
+					button.dataset.tooltip = 'Remove from current playlist';
+					button.style.marginLeft = '8px';
+
+					var iconDiv = document.createElement('div');
+					iconDiv.className = 'yt-spec-button-shape-next__icon';
+					
+					var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+					svg.setAttributeNS(null, 'viewBox', '0 0 24 24');
+					var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+					path.setAttributeNS(null, 'd', 'M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z M9 8h2v9H9V8zm4 0h2v9h-2V8z');
+					path.style.fill = 'currentColor';
+					svg.appendChild(path);
+					
+					var iconSpan = document.createElement('span');
+					iconSpan.className = 'ytIconWrapperHost';
+					iconSpan.style.display = 'flex';
+					iconSpan.style.alignItems = 'center';
+					iconSpan.style.justifyContent = 'center';
+					iconSpan.style.width = '24px';
+					iconSpan.style.height = '24px';
+					iconSpan.appendChild(svg);
+					iconDiv.appendChild(iconSpan);
+
+					var textDiv = document.createElement('div');
+					textDiv.className = 'yt-spec-button-shape-next__button-text-content';
+					textDiv.textContent = 'Remove';
+
+					button.appendChild(iconDiv);
+					button.appendChild(textDiv);
+
+					button.onclick = function () {
+						var activePlaylistItemButton = document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer button') || document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer yt-icon-button');
+						if (activePlaylistItemButton) {
+							activePlaylistItemButton.click();
+							setTimeout(function() {
+								var menuItems = document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string');
+								for (var i = 0; i < menuItems.length; i++) {
+									if (menuItems[i].textContent.includes('Remove from')) {
+										menuItems[i].click();
+										break;
+									}
+								}
+							}, 150);
+						}
+						button.dataset.tooltip = 'Removed!';
+						setTimeout(function() {
+							button.dataset.tooltip = 'Remove from current playlist';
+						}, 500);
+					}
+
+					section.insertAdjacentElement('afterend', button)
+				}
+			} else if (existingRemoveBtn) {
+				existingRemoveBtn.remove();
+			}
+
 			if (this.storage.copy_transcript !== false && !document.querySelector('#it-below-player-copy-transcript')) {
 				var button = document.createElement('button'),
 					svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),

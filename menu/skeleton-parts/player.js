@@ -1487,6 +1487,12 @@ extension.skeleton.main.layers.section.player.on.click = {
 				component: 'switch',
 				text: 'copyVideoUrl',
 				value: false
+			},
+			remove_from_playlist: {
+				component: 'switch',
+				text: 'removeFromPlaylist',
+				id: "remove-from-playlist",
+				value: false
 			}
 		},
 		extraRightControlButtons: {
