@@ -627,6 +627,8 @@ ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer = function () {
 					}
 
 					section.insertAdjacentElement('afterend', button)
+				} else if (existingRemoveBtn.previousElementSibling !== section) {
+					section.insertAdjacentElement('afterend', existingRemoveBtn);
 				}
 			} else if (existingRemoveBtn) {
 				existingRemoveBtn.remove();
