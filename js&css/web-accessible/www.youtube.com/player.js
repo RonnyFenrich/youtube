@@ -1,40 +1,4 @@
 /*------------------------------------------------------------------------------
-AUTOPLAY DISABLE
-------------------------------------------------------------------------------*/
-ImprovedTube.autoplayDisable = function (videoElement) {
-	if (this.storage.player_autoplay_disable
-		|| this.storage.playlist_autoplay === false
-		|| this.storage.channel_trailer_autoplay === false) {
-		const player = this.elements.player || videoElement.closest('.html5-video-player') || videoElement.closest('#movie_player'); // #movie_player: outdated since 2024?
-
-		//if (there is a player) and (no user clicks) and (no ads playing)
-		// and( ((auto play is off and it is not in a playlist)
-		//   	 or (playlist auto play is off and in a playlist))
-		//   	 or (we are in a channel and the channel trailer autoplay is off)  )
-
-		if (player && !this.user_interacted // (=user didnt click or type)
-			&& !player.classList.contains('ad-showing') // (=no ads playing, needs an update?)
-			&& ((location.href.includes('/watch?') // #1703 // (=video page)
-				// player_autoplay_disable & not playlist
-				&& (this.storage.player_autoplay_disable && !location.href.includes('list='))
-				// !playlist_autoplay & playlist
-				|| (this.storage.playlist_autoplay === false && location.href.includes('list=')))
-				// channel homepage & !channel_trailer_autoplay
-				|| (this.storage.channel_trailer_autoplay === false && this.regex.channel.test(location.href)
-				   && !/\/(videos|shorts|playlists|community|channels|about|posts|streams|releases)$/.test(location.href) )
-			   )) {
-
-			setTimeout(function () {
-				try { player.pauseVideo(); } catch (error) { console.log("autoplayDisable: Pausing"); videoElement.pause(); }
-			});
-		} else {
-			document.dispatchEvent(new CustomEvent('it-play'));
-		}
-	} else {
-		document.dispatchEvent(new CustomEvent('it-play'));
-	}
-};
-/*------------------------------------------------------------------------------
 FORCED PLAY VIDEO FROM THE BEGINNING
 ------------------------------------------------------------------------------*/
 ImprovedTube.forcedPlayVideoFromTheBeginning = function () {
@@ -1493,6 +1457,12 @@ ImprovedTube.miniPlayer_scroll = function () {
 
 		ImprovedTube.mini_player__setSize(ImprovedTube.mini_player__width, ImprovedTube.mini_player__height, true, true);
 
+		// Re-apply disableAutoDubbing when entering mini player mode
+		// (YouTube may reset audio track when switching to mini player)
+		if (ImprovedTube.storage.disable_auto_dubbing === true) {
+			ImprovedTube.disableAutoDubbing();
+		}
+
 		window.addEventListener('mousedown', ImprovedTube.miniPlayer_mouseDown);
 		window.addEventListener('mousemove', ImprovedTube.miniPlayer_cursorUpdate);
 		window.addEventListener('resize', ImprovedTube.miniPlayer_scroll);
@@ -1508,6 +1478,12 @@ ImprovedTube.miniPlayer_scroll = function () {
 		document.documentElement.removeAttribute('it-mini-player-cursor');
 
 		window.dispatchEvent(new Event('resize'));
+
+		// Re-apply disableAutoDubbing when exiting mini player mode
+		// (YouTube may reset audio track when switching back to normal player)
+		if (ImprovedTube.storage.disable_auto_dubbing === true) {
+			ImprovedTube.disableAutoDubbing();
+		}
 
 		window.removeEventListener('mousedown', ImprovedTube.miniPlayer_mouseDown);
 		window.removeEventListener('mousemove', ImprovedTube.miniPlayer_mouseMove);
@@ -2114,6 +2090,76 @@ ImprovedTube.disableAutoDubbing = function () {
 		return fallback;
 	}
 }
+/*------------------------------------------------------------------------------
+# AUTO-SELECT PREFERRED DUBBING LANGUAGE
+------------------------------------------------------------------------------*/
+/**
+ * Automatically selects the audio track whose language code matches the user's
+ * preferred dubbing language (storage.preferred_dubbing_language).
+ * Falls back silently if no matching track is found.
+ */
+ImprovedTube.preferredDubbingLanguage = function () {
+	const preferred = (ImprovedTube.storage.preferred_dubbing_language || '').trim().toLowerCase();
+	if (!preferred) return;
+
+	const player = this.elements.player;
+	const tracks = player?.getAvailableAudioTracks();
+	if (!tracks || !tracks.length) return;
+
+	const match = tracks.find(function (track) {
+		const langCode = (track?.getLanguageInfo?.()?.languageCode || '').toLowerCase();
+		const langName = (track?.getLanguageInfo?.()?.name || '').toLowerCase();
+		return langCode.startsWith(preferred) || langName.includes(preferred);
+	});
+
+	if (match) {
+		player.setAudioTrack(match);
+	}
+};
+/*------------------------------------------------------------------------------
+# SELECT DEFAULT DUBBED LANGUAGE
+------------------------------------------------------------------------------*/
+ImprovedTube.selectDubbedLanguage = function () {
+	const self = this;
+	const selectedLang = this.storage.player_default_dubbed_language;
+	if (!selectedLang || selectedLang === 'disabled') return;
+
+	var tries = 0;
+	var maxTries = 10;
+	var interval = setInterval(function () {
+		tries++;
+		const player = self.elements.player;
+		if (!player || !player.getAvailableAudioTracks) {
+			if (tries >= maxTries) clearInterval(interval);
+			return;
+		}
+
+		const tracks = player.getAvailableAudioTracks();
+		if (!tracks || tracks.length <= 1) {
+			if (tries >= maxTries) clearInterval(interval);
+			return;
+		}
+
+		const selected = selectedLang.toLowerCase();
+
+		const targetTrack = tracks.find(function (track) {
+			const info = track?.getLanguageInfo?.();
+			if (!info) return false;
+			// audio tracks use 'id' (e.g. "en.1", "en"), not 'languageCode'
+			const trackId = (info.id || '').toLowerCase();
+			return trackId === selected ||
+				trackId.startsWith(selected + '.') ||
+				trackId.startsWith(selected + '-');
+		});
+
+		if (targetTrack) {
+			player.setAudioTrack(targetTrack);
+			clearInterval(interval);
+		} else if (tries >= maxTries) {
+			clearInterval(interval);
+		}
+	}, 300);
+};
 /*------------------------------------------------------------------------------
 # JUMP TO THE NEXT KEY SCENE
 ------------------------------------------------------------------------------*/
@@ -2854,3 +2900,21 @@ window.addEventListener('keydown', (e) => {
         ImprovedTube.heatmap.jumpToNextPeak();
     }
 });
+
+/*------------------------------------------------------------------------------
+Hide Pause Overlay
+------------------------------------------------------------------------------*/
+function hidePauseOverlay(){
+  if(!document.getElementById('it-hide-pause-overlay')){
+    const s=document.createElement('style');
+    s.id='it-hide-pause-overlay';
+    s.textContent='.ytp-pause-overlay-container,.ytp-autonav-endscreen-container,.ytp-endscreen-content{display:none!important}';
+    document.documentElement.appendChild(s);
+  }
+  const f=()=>document.querySelectorAll('tp-yt-paper-dialog[role="dialog"]').forEach(e=>/continue watching|video paused/i.test(e.textContent)&&e.remove());
+  f();
+  if(!window.hidePauseOverlayObserver){
+    window.hidePauseOverlayObserver=new MutationObserver(f);
+    window.hidePauseOverlayObserver.observe(document.body,{childList:true,subtree:true});
+  }
+}
