@@ -83,8 +83,8 @@ ImprovedTube.cleanupPlaylistHandlers = function() {
 // Fix #1836: Independent inject function for button
 ImprovedTube.injectReverseButton = function() {
 	if (document.querySelector('#it-reverse-playlist')) return;
-	
-	var container = ImprovedTube.elements.playlist.actions 
+
+	var container = ImprovedTube.elements.playlist.actions
 		|| document.querySelector('ytd-playlist-panel-renderer #playlist-action-menu')
 		|| document.querySelector('.ytd-playlist-panel-renderer #playlist-action-menu')
 		|| document.querySelector('#playlist-action-menu')
@@ -93,9 +93,9 @@ ImprovedTube.injectReverseButton = function() {
 		|| document.querySelector('yt-formatted-string.title.style-scope.ytd-playlist-panel-renderer')?.parentElement
 		|| document.querySelector('ytd-playlist-panel-renderer #top-level-buttons-computed')
 		|| document.querySelector('ytd-playlist-header-renderer #playlist-action-menu');
-	
+
 	if (!container) return;
-	
+
 	var button = document.createElement('button'),
 		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
 		path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -103,7 +103,7 @@ ImprovedTube.injectReverseButton = function() {
 	button.id = 'it-reverse-playlist';
 	button.className = 'style-scope yt-icon-button' + (ImprovedTube.playlistReversed ? ' active' : '');
 	button.title = 'Reverse Playlist';
-	
+
 	button.addEventListener('click', function (event) {
 		event.preventDefault();
 		event.stopPropagation();
@@ -136,8 +136,23 @@ ImprovedTube.playlistReverseUpdate = function () {
 
 	if (!playlist || !autoplay) return;
 
-	// Use idempotent flag to prevent double reversal (Fix #3733)
-	var isCurrentlyReversed = playlist.it_reversed === true;
+	// Determine if currently reversed by checking YouTube's own index properties, which is 100% foolproof
+	// against YouTube modifying the array in-place without triggering a new object allocation.
+	var isCurrentlyReversed = false;
+	if (playlist.contents && playlist.contents.length > 1) {
+		var firstItem = playlist.contents[0].playlistPanelVideoRenderer || playlist.contents[0].playlistVideoRenderer;
+		var lastItem = playlist.contents[playlist.contents.length - 1].playlistPanelVideoRenderer || playlist.contents[playlist.contents.length - 1].playlistVideoRenderer;
+
+		var firstIndex = firstItem?.navigationEndpoint?.watchEndpoint?.index ?? 0;
+		var lastIndex = lastItem?.navigationEndpoint?.watchEndpoint?.index ?? 0;
+
+		if (firstIndex > lastIndex) {
+			isCurrentlyReversed = true;
+		}
+	} else {
+		isCurrentlyReversed = playlist.it_reversed === true;
+	}
+
 	var shouldBeReversed = ImprovedTube.playlistReversed === true;
 	if (isCurrentlyReversed === shouldBeReversed) {
 		return;
@@ -158,15 +173,41 @@ ImprovedTube.playlistReverseUpdate = function () {
 
 	ImprovedTube.elements.ytd_watch.updatePageData_(JSON.parse(JSON.stringify(ImprovedTube.elements.ytd_watch.data)));
 
-	setTimeout(function () {
+	// On a fresh page load (e.g. refreshing while a playlist is already set
+	// to reversed) #4353's player chrome - <ytd-player>, <yt-playlist-manager>
+	// - can still be initializing when this fires. ImprovedTube.elements.ytd_player
+	// in particular is populated by a separate, async DOM walk and isn't
+	// guaranteed to be set yet. Previously that missing check meant
+	// ytd_player.updatePlayerComponents() below could throw on undefined,
+	// silently aborting the rest of this callback - including the direct
+	// panel-data patch - so the panel and next-video order stayed
+	// unreversed even though playlist.contents itself was already reversed
+	// above, and the toggle button (which only reflects the setting, not
+	// this update) still showed as active.
+	var attempts = 0;
+	function applyReversedPlaylistToPlayer() {
+		attempts++;
 		var playlist_manager = document.querySelector('yt-playlist-manager');
-		if (playlist_manager) {
-			ImprovedTube.elements.ytd_player.updatePlayerComponents(null, autoplay, null, playlist);
+		var playlist_panel = document.querySelector('ytd-playlist-panel-renderer');
+		var ytd_player = ImprovedTube.elements.ytd_player || document.querySelector('ytd-player');
+
+		if (playlist_manager && ytd_player) {
+			ytd_player.updatePlayerComponents(null, autoplay, null, playlist);
 			playlist_manager.autoplayData = autoplay;
 			playlist_manager.setPlaylistData(playlist);
-			ImprovedTube.elements.ytd_player.updatePlayerPlaylist_(playlist);
+			ytd_player.updatePlayerPlaylist_(playlist);
 		}
-	}, 100);
+		if (playlist_panel && playlist_panel.data) {
+			// Update the panel directly to ensure Polymer re-renders it
+			playlist_panel.data = playlist;
+			if (typeof playlist_panel.updateData === 'function') playlist_panel.updateData(playlist);
+		}
+
+		if (!(playlist_manager && ytd_player && playlist_panel) && attempts < 5) {
+			setTimeout(applyReversedPlaylistToPlayer, 200);
+		}
+	}
+	setTimeout(applyReversedPlaylistToPlayer, 100);
 };
 
 ImprovedTube.playlistReverseObserver = null;
@@ -174,23 +215,23 @@ ImprovedTube.playlistReverseObserver = null;
 ImprovedTube.playlistReverse = function () {
 	if (this.storage.playlist_reverse === true) {
 		ImprovedTube.injectReverseButton();
-		
+
 		if (ImprovedTube.playlistReversed === true) {
 			ImprovedTube.playlistReverseUpdate();
 		}
 
 		if (!ImprovedTube.playlistReverseObserver) {
-			var targetNode = document.querySelector('ytd-playlist-panel-renderer') 
-				|| document.querySelector('ytd-watch-flexy') 
+			var targetNode = document.querySelector('ytd-playlist-panel-renderer')
+				|| document.querySelector('ytd-watch-flexy')
 				|| document.body;
-			
+
 			if (targetNode) {
 				ImprovedTube.playlistReverseObserver = new MutationObserver(function(mutations) {
 					if (!document.querySelector('#it-reverse-playlist')) {
 						ImprovedTube.injectReverseButton();
 					}
 				});
-				
+
 				ImprovedTube.playlistReverseObserver.observe(targetNode, {
 					childList: true,
 					subtree: true
@@ -406,4 +447,3 @@ ImprovedTube.playlistPopup = function () {
 		} catch (error) { console.error("Error appending playlist button panel:", error);}
 	}
 };
-

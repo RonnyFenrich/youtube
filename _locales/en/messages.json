@@ -1,6 +1,7 @@
 {
-  "preferredDubbingLanguage": {
-		"message": "Preferred dubbing language"
+  "dontShortenTitles": { 	"message": "Full Video Titles (don't shorten)" },
+	 "preferredDubbingLanguage": {
+		"message": "Preferred auto-dubbing language"
 	},
   "hideSuggestedAction": {
     "message": "Hide Suggested Action 'View products'"
@@ -116,6 +117,9 @@
   "atSubscriptions": {
     "message": "at 'Subscriptions'"
   },
+  "removeSubscriptionsLiveStreams": {
+    "message": "Hide live streams at 'Subscriptions'"
+  },
   "atTrending": {
     "message": "at 'Trending'"
   },
@@ -145,6 +149,9 @@
   },
   "autoplayDisable": {
     "message": "Force Autoplay Off"
+  },
+  "autoContinueWatching": {
+    "message": "Auto-accept «Continue watching?»"
   },
   "autoPlayNextShort": {
     "message": "Shorts up next autoplay"
@@ -441,7 +448,10 @@
     "message": "Dim"
   },
   "disableAutoDubbing": {
-    "message": "Disable auto dubbing"
+    "message": "Disable auto-dubbing"
+  },
+  "hideAutoDubbedOptions": {
+    "message": "Hide auto-dubbing options in menu"
   },
   "disabled": {
     "message": "Disabled"
@@ -584,6 +594,9 @@
   "fullScreenQuality": {
     "message": "Fullscreen quality"
   },
+  "playlistQuality": {
+    "message": "Playlist quality"
+  },
   "fullscreenReturn": {
     "message": "Fullscreen return"
   },
@@ -696,7 +709,10 @@
     "message": "Hide details"
   },
   "hideEndscreen": {
-    "message": "Hide endscreen"
+    "message": "Hide endcards"
+  },
+  "hideLastframe": {
+    "message": "Hide ended video (last frame)"
   },
   "hideFeaturedContent": {
     "message": "Hide featured content"
@@ -1070,6 +1086,9 @@
   "playbackSpeedButton": {
     "message": "Playback speed button"
   },
+  "preferredSpeed": {
+    "message": "Preferred speed"
+  },
   "playbackSpeedHotkey": {
     "message": "Playback speed hotkeys"
   },
@@ -1091,14 +1110,14 @@
   "player_fit_to_win_button": {
     "message": "Fit to window"
   },
-  "player_playback_speed_button": {
-    "message": "Playback Speed Button"
-  },
   "player_rewind_and_forward_buttons": {
     "message": "Rewind/forward buttons"
   },
   "player_rotate_button": {
     "message": "Rotate video"
+  },
+  "player_volume_boost_button": {
+    "message": "Volume Boost button"
   },
   "playerAutoPipOutside": {
     "message": "Auto-PiP only outside source Tab"
@@ -1132,6 +1151,9 @@
   },
   "popupWindowButtons": {
     "message": "Add a popup-player-button to each thumbnail"
+  },
+  "watchLaterButtons": {
+    "message": "Add a Watch Later button to thumbnails"
   },
   "position": {
     "message": "Position"
@@ -1238,6 +1260,9 @@
   "removePlayables": {
     "message": "Hide playables"
   },
+  "removeTopLiveGames": {
+    "message": "Hide 'Top live games' on the home page"
+  },
   "removeRelatedSearchResults": {
     "message": "Remove related search results"
   },
@@ -1279,6 +1304,9 @@
   },
   "rotate": {
     "message": "Rotate"
+  },
+  "volumeBoost": {
+    "message": "Volume Boost"
   },
   "save": {
     "message": "Save"
@@ -1361,6 +1389,9 @@
   "showChannelVideosCount": {
     "message": "Show channel videos count"
   },
+  "ccIndicator": {
+    "message": "Restore CC (subtitles) indicator on channel Videos page"
+  },
   "showExactDate": {
     "message": "Show Exact Date"
   },
@@ -1388,6 +1419,12 @@
   "Sidebar_simple_alternative": {
     "message": "Sidebar (simple alternative)"
   },
+  "sidePanels": {
+    "message": "Side panels (Watch later, In this video, ...)"
+  },
+  "sidePanelsOnlyOneExpanded": {
+    "message": "Only one expanded at a time"
+  },
   "smartSpeed": {
     "message": "Speed up lesser-watched sections"
   },
@@ -1399,6 +1436,9 @@
   },
   "squaredUserImages": {
     "message": "Squared user images"
+  },
+  "squaredThumbnails": {
+    "message": "Squared thumbnails"
   },
   "static": {
     "message": "Static"
@@ -1478,8 +1518,17 @@
   "thumbnails": {
     "message": "Thumbnails"
   },
+  "thumbnailGrayscale":{
+    "message":"Thumbnail Grayscale"
+  },
   "thumbnailSize": {
     "message": "Thumbnail Size"
+  },
+  "largerThumbnailMetadata": {
+    "message": "Larger thumbnail metadata (channel, views, age)"
+  },
+  "classicThumbnailMetadata": {
+    "message": "Classic thumbnail metadata (X views · Y months ago)"
   },
   "thumbnailsQuality": {
     "message": "Thumbnails Quality"
@@ -1581,7 +1630,7 @@
     "message": "Watch later"
   },
   "watchLaterButton": {
-    "message": "Add a 'Watch Later' button to each thumbnail"
+    "message": "Add a 'Watch Later' button to each thumbnail (menu-based)"
   },
   "watchTime": {
     "message": "Watch time"
@@ -1609,6 +1658,45 @@
   },
   "withoutVideos": {
     "message": "'Empty', without video previews"
+  },
+  "videoFilters": {
+    "message": "Video Filters"
+  },
+  "videoFiltersButton": {
+    "message": "Video Filters button"
+  },
+  "preset": {
+    "message": "Preset"
+  },
+  "vivid": {
+    "message": "Vivid"
+  },
+  "cinema": {
+    "message": "Cinema"
+  },
+  "warm": {
+    "message": "Warm"
+  },
+  "cool": {
+    "message": "Cool"
+  },
+  "brightness": {
+    "message": "Brightness"
+  },
+  "contrast": {
+    "message": "Contrast"
+  },
+  "saturation": {
+    "message": "Saturation"
+  },
+  "hue": {
+    "message": "Hue"
+  },
+  "sharpness": {
+    "message": "Sharpness"
+  },
+  "gamma": {
+    "message": "Gamma"
   },
   "yellow": {
     "message": "Yellow"
@@ -1672,5 +1760,162 @@
   },
   "smartSpeedWhitelisted": {
     "message": "Channel Whitelisted for Smart Speed!"
+  },
+  "autoVideoRecovery": {
+  "message": "Auto video recovery"
+  },
+  "hideWatchLaterVideos": {
+    "message": "Hide Watch Later Videos"
+  },
+  "maxWidthWithinPage": {
+    "message": "Max. width within the page"
+  },
+  "smartSpeedSelectYouTubeCategory": {
+    "message": "1. Select YouTube Category"
+  },
+  "smartSpeedSelectCategory": {
+    "message": "Select Category..."
+  },
+  "categoryEntertainment": {
+    "message": "Entertainment"
+  },
+  "categoryMusic": {
+    "message": "Music"
+  },
+  "categoryGaming": {
+    "message": "Gaming"
+  },
+  "categoryPeopleBlogs": {
+    "message": "People & Blogs"
+  },
+  "categoryComedy": {
+    "message": "Comedy"
+  },
+  "categoryHowtoStyle": {
+    "message": "Howto & Style"
+  },
+  "categoryFilmAnimation": {
+    "message": "Film & Animation"
+  },
+  "categoryEducation": {
+    "message": "Education"
+  },
+  "categoryScienceTechnology": {
+    "message": "Science & Technology"
+  },
+  "categorySports": {
+    "message": "Sports"
+  },
+  "categoryNewsPolitics": {
+    "message": "News & Politics"
+  },
+  "categoryAutosVehicles": {
+    "message": "Autos & Vehicles"
+  },
+  "categoryTravelEvents": {
+    "message": "Travel & Events"
+  },
+  "categoryPetsAnimals": {
+    "message": "Pets & Animals"
+  },
+  "categoryNonprofitsActivism": {
+    "message": "Nonprofits & Activism"
+  },
+  "smartSpeedAddSelectedCategory": {
+    "message": "➕ Add Selected Category"
+  },
+  "smartSpeedEnterAddChannelName": {
+    "message": "➕ Enter & Add Channel Name"
+  },
+  "smartSpeedChannelPrompt": {
+    "message": "Enter Channel Handle (e.g., @MrBeast) or Name:"
+  },
+  "smartSpeedWhitelistDisable": {
+    "message": "Whitelist (Disable Speedup)"
+  },
+  "smartSpeedMaxProfileSpeed": {
+    "message": "Max Speed"
+  },
+  "smartSpeedMinProfileSpeed": {
+    "message": "Min Speed"
+  },
+  "smartSpeedDeleteProfile": {
+    "message": "🗑️ Delete Profile"
+  },
+  "smartSpeedCaptionsEnable": {
+    "message": "Enable Transcript Analysis"
+  },
+  "smartSpeedCaptionWeight": {
+    "message": "Caption Weight"
+  },
+  "smartSpeedSpeechLeadSeconds": {
+    "message": "Speech Lead-in (Seconds)"
+  },
+  "smartSpeedSpeechReleaseSeconds": {
+    "message": "Speech Release (Seconds)"
+  },
+  "smartSpeedSponsorBlockEnable": {
+    "message": "SponsorBlock Integration"
+  },
+  "smartSpeedIntroOutroEnable": {
+    "message": "Intro/Outro Detection"
+  },
+  "smartSpeedIntroOutroMax": {
+    "message": "Intro/Outro Max Speed"
+  },
+  "smartSpeedSkipIntroButton": {
+    "message": "Show 'Skip Intro' Button"
+  },
+  "smartSpeedSkipSponsorButton": {
+    "message": "Show 'Skip Sponsor' Button"
+  },
+  "smartSpeedNoHeatmapFallbackMode": {
+    "message": "Fallback Mode (No Heatmap)"
+  },
+  "smartSpeedFallbackCaptions": {
+    "message": "Transcript / Speech Detection"
+  },
+  "smartSpeedFallbackDefaultSpeed": {
+    "message": "Normal Speed (1.0x)"
+  },
+  "smartSpeedFallbackFixedSpeed": {
+    "message": "Fixed Speed"
+  },
+  "smartSpeedNoHeatmapFixedSpeed": {
+    "message": "Fixed Fallback Speed"
+  },
+  "smartSpeedWhitelistShorts": {
+    "message": "Disable for Shorts"
+  },
+  "smartSpeedShortVideoThreshold": {
+    "message": "Short Video Threshold (Seconds)"
+  },
+  "smartSpeedWhitelistLive": {
+    "message": "Disable for Live Streams"
+  },
+  "smartSpeedRulePriority": {
+    "message": "Rule Evaluation Priority"
+  },
+  "smartSpeedPriorityChannelCategoryLanguage": {
+    "message": "Channel > Category > Language"
+  },
+  "smartSpeedPriorityChannelLanguageCategory": {
+    "message": "Channel > Language > Category"
+  },
+  "smartSpeedPriorityLanguageChannelCategory": {
+    "message": "Language > Channel > Category"
+  },
+  "smartSpeedPriorityCategoryChannelLanguage": {
+    "message": "Category > Channel > Language"
+  },
+  "smartSpeedSelectLanguage": {
+    "message": "2. Select Audio Language"
+  },
+  "smartSpeedSelectLanguagePlaceholder": {
+    "message": "Select Language..."
+  },
+  "smartSpeedAddSelectedLanguage": {
+    "message": "➕ Add Selected Language"
   }
 }
+

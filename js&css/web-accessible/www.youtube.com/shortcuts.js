@@ -49,6 +49,27 @@ ImprovedTube.shortcutsInit = function () {
 				window.addEventListener(name, handler, {passive: false, capture: true});
 			}
 		}
+
+		// Issue #3986: a missed keyup — focus moving to the player/an ad iframe,
+		// an SPA navigation, or a tab switch, all common while the connection is
+		// unstable — leaves a key stuck in input.pressed.keys. Because
+		// shortcutsHandler() requires an EXACT key-set size match, a single stuck
+		// key silently disables EVERY shortcut. The only existing recovery is the
+		// 'improvedtube-blur' event, dispatched from the extension side (core.js)
+		// over the messaging path / MV3 background worker — which the same network
+		// instability can suspend, so shortcuts stay dead until a manual reload.
+		// Bind the same reset to native, in-page events so recovery is immediate
+		// and never depends on the background worker. Clearing an already-empty
+		// set is a harmless no-op, so we bind once and leave it.
+		if (!this.input.recoveryListenersBound) {
+			this.input.recoveryListenersBound = true;
+			const resetPressedKeys = this.shortcutsListeners['improvedtube-blur'];
+			window.addEventListener('blur', resetPressedKeys);
+			document.addEventListener('visibilitychange', function () {
+				if (document.hidden) resetPressedKeys();
+			});
+			document.addEventListener('yt-navigate-start', resetPressedKeys);
+		}
 	} else {
 		// no shortcuts means we dont need 'listeners', uninstall all
 		for (const [name, handler] of Object.entries(this.shortcutsListeners)) {
@@ -354,7 +375,7 @@ ImprovedTube.shortcutSeekPreviousChapter = function () {
 4.7.13 INCREASE VOLUME
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutIncreaseVolume = function (decrease) {
-	const player = this.elements.player,
+	const player = (document.documentElement.dataset.pageType === 'shorts') ? this.elements.shorts_player : this.elements.player,
 		value = Number(this.storage.shortcuts_volume_step) || 5,
 		direction = decrease ? 'Decrease' : 'Increase';
 
@@ -408,12 +429,12 @@ ImprovedTube.shortcutIncreasePlaybackSpeed = function (decrease) {
 	}
 	if (decrease) {
 		// Slow down near 0   // Chrome's minimum is 0.0625. Otherwise this could seamlessly turn into single frame steps.
-		newSpeed = (speed - value < 0.1) ? Math.max(Number(speed*0.7).toFixed(2),0.0625) : (speed - value);  
+		newSpeed = (speed - value < 0.1) ? Math.max(Number(speed*0.7).toFixed(2),0.0625) : (speed - value);
 	} else {
-		// Aligning at 1.0 instead of passing by 1:		
-		if ( (speed < 1 && speed > 1-ImprovedTube.storage.shortcuts_playback_speed_step) || (speed > 1 && speed < 1+ImprovedTube.storage.shortcuts_playback_speed_step) ) {newSpeed = 1;  
+		// Aligning at 1.0 instead of passing by 1:
+		if ( (speed < 1 && speed > 1-ImprovedTube.storage.shortcuts_playback_speed_step) || (speed > 1 && speed < 1+ImprovedTube.storage.shortcuts_playback_speed_step) ) {newSpeed = 1;
 		// Firefox doesnt limit speed to 16x, we can allow more in Firefox.
-		} else { newSpeed = (speed + value > 16) ? 16 : (speed + value); } 
+		} else { newSpeed = (speed + value > 16) ? 16 : (speed + value); }
 	}
 	newSpeed = this.playbackSpeed(newSpeed);
 	if (!newSpeed) {
@@ -427,7 +448,7 @@ ImprovedTube.shortcutIncreasePlaybackSpeed = function (decrease) {
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutDecreasePlaybackSpeed = function () {
 	ImprovedTube.shortcutIncreasePlaybackSpeed(true);
-}; 
+};
 /*------------------------------------------------------------------------------
 4.7.18 RESET PLAYBACK SPEED
 ------------------------------------------------------------------------------*/
@@ -442,7 +463,7 @@ ImprovedTube.shortcutGoToSearchBox = function () {
 	document.querySelector('input#search')?.click();
 	if (ImprovedTube.originalFocus) { HTMLElement.prototype.focus = originalFocus }
 	document.querySelector('input[name="search_query"]')?.focus();
-	document.querySelector('input#search')?.focus(); 
+	document.querySelector('input#search')?.focus();
 };
 /*------------------------------------------------------------------------------
 4.7.20 ACTIVATE FULLSCREEN
@@ -633,8 +654,12 @@ ImprovedTube.shortcutRotateVideo = function () {
 
 	if (rotate == 90 || rotate == 270) {
 		var is_vertical_video = video.videoHeight > video.videoWidth;
-
-		transform += ' scale(' + (is_vertical_video ? player.clientWidth : player.clientHeight) / (is_vertical_video ? player.clientHeight : player.clientWidth) + ')';
+												if (
+											document.querySelector("ytd-watch-flexy[theater]") && document.querySelector('ytd-app:not([player-fullscreen_]) ytd-watch-flexy:not([fullscreen])')
+											) { transform += ' scale(' + (is_vertical_video ? video.clientWidth : video.clientHeight) / (is_vertical_video ? video.clientHeight : video.clientWidth) + ')';
+													} else {
+											transform += ' scale(' + (is_vertical_video ? player.clientWidth : player.clientHeight) / (is_vertical_video ? player.clientHeight : player.clientWidth) + ')';
+										}
 	}
 	video.style.setProperty("transform", transform);
 };
@@ -645,39 +670,28 @@ ImprovedTube.shortcutActivateFitToWindow = function() {
 4.7.31 CINEMA MODE
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutCinemaMode = function () {
-	var playerContainer = document.getElementById('player-full-bleed-container');
-	if (playerContainer.style.zIndex == 10000) {
-		playerContainer.style.zIndex = 1;
-	} else {
-		playerContainer.style.zIndex = 10000;
-	}
-	
-	var overlay = document.getElementById('overlay_cinema');
-	if (!overlay) {
-		createOverlay();
-	} else {
-		overlay.style.display = overlay.style.display === 'none' || overlay.style.display === '' ? 'block' : 'none';
-	}
+	ImprovedTube.cinemaModeActive = !ImprovedTube.cinemaModeActive;
+	ImprovedTube.cinemaModeSetVisible(ImprovedTube.cinemaModeActive);
 }
 /*------------------------------------------------------------------------------
 4.7.32 REFRESH CATEGORIES
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutRefreshCategories = function () {
 	let chipContainer = document.querySelector('ytd-feed-filter-chip-bar-renderer');
-	
+
 	if (chipContainer) {
 		chipContainer.style.display = '';
 		chipContainer.style.visibility = 'visible';
 		chipContainer.style.opacity = '1';
 		chipContainer.hidden = false;
-		
+
 		let parent = chipContainer.parentElement;
 		while (parent && parent !== document.body) {
 			parent.style.display = '';
 			parent.style.visibility = 'visible';
 			parent = parent.parentElement;
 		}
-		
+
 		const allChips = chipContainer.querySelectorAll('yt-chip-cloud-chip-renderer button');
 		if (allChips.length > 1) {
 			allChips[1].click();
@@ -694,8 +708,20 @@ ImprovedTube.shortcutRefreshCategories = function () {
 4.7.33 SMART SPEED TOGGLE
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutSmartSpeed = function () {
-	if (ImprovedTube.storage.smart_speed === false) { if(ImprovedTube.heatmap) {ImprovedTube.heatmap.init(); };
-    } else if (ImprovedTube.storage.smart_speed === true) { if(ImprovedTube.heatmap) { ImprovedTube.heatmap.isEnabled = false; document.querySelector("video").playbackRate = 1.0; } 
-    }
-	this.storage.smart_speed = !this.storage.smart_speed;
+	const newValue = !(ImprovedTube.storage.smart_speed === true);
+	ImprovedTube.storage.smart_speed = newValue;
+	if (ImprovedTube.messages && typeof ImprovedTube.messages.send === 'function') {
+		ImprovedTube.messages.send({ action: 'set', key: 'smart_speed', value: newValue });
+	}
+
+	if (newValue) {
+		if (ImprovedTube.smartSpeed?.init) { ImprovedTube.smartSpeed.init(); }
+		else if (ImprovedTube.heatmap?.init) { ImprovedTube.heatmap.init(); }
+	} else {
+		if (ImprovedTube.smartSpeed?._teardown) { ImprovedTube.smartSpeed._teardown(); }
+		else if (ImprovedTube.heatmap) { ImprovedTube.heatmap.isEnabled = false; }
+		const video = document.querySelector('video');
+		if (video) video.playbackRate = 1.0;
+	}
 };
+

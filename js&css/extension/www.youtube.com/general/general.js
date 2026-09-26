@@ -8,6 +8,7 @@
 # Confirmation before closing
 # Default content country
 # Add "Popup window" buttons
+# Add "Watch Later" buttons
 # Font
 # Mark watched videos
 # Track watched videos
@@ -278,12 +279,14 @@ extension.features.popupWindowButtons = function (event) {
 							target.itPopupWindowButton.addEventListener('click', function (event) {
 								event.preventDefault();
 								event.stopPropagation();
-								try { this.parentElement.itPopupWindowButton.dataset.id = this.parentElement.href.match(/(?:[?&]v=|embed\/|shorts\/)([^&?]{11})/)[1] } catch (error) { console.log(error) };
+								var videoLink = extension.features.popupWindowButtons.findVideoLink(this.parentElement);
+								if (!videoLink) return;
+								try { this.dataset.id = videoLink.href.match(/(?:[?&]v=|embed\/|shorts\/)([^&?]{11})/)[1] } catch (error) { console.log(error); return; };
 								ytPlayer = document.querySelector("#movie_player");
 								if (ytPlayer) { width = ytPlayer.offsetWidth * 0.65; height = ytPlayer.offsetHeight * 0.65 } else { width = innerWidth * 0.4; height = innerHeight * 0.4; }
 								if (!ytPlayer) {
-									let shorts = /short/.test(this.parentElement.href);
-									if (width / height < 1) { let vertical = true } else { let vertical = false }
+									let shorts = /short/.test(videoLink.href);
+									let vertical = width / height < 1;
 									if (!vertical && shorts) { width = height * 0.6 }
 									if (vertical && !shorts) { height = width * 0.6 }
 								}
@@ -293,7 +296,7 @@ extension.features.popupWindowButtons = function (event) {
 									action: 'fixPopup',
 									width: width,
 									height: height,
-									title: this.parentElement.closest('*[id="video-title"]')?.textContent + " - Youtube"
+									title: (videoLink.closest('ytd-rich-grid-media, ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer')?.querySelector('#video-title')?.textContent || videoLink.getAttribute('title') || document.title) + " - Youtube"
 								})
 							});
 						}
@@ -308,6 +311,274 @@ extension.features.popupWindowButtons = function (event) {
 			window.addEventListener('mouseover', this.popupWindowButtons, true);
 		} else {
 			window.removeEventListener('mouseover', this.popupWindowButtons, true);
+		}
+	}
+};
+
+extension.features.popupWindowButtons.findVideoLink = function (element) {
+	if (!element) return null;
+
+	if (element.href && /(?:[?&]v=|embed\/|shorts\/)([^&?]{11})/.test(element.href)) {
+		return element;
+	}
+
+	return element.closest('a[href*="/watch"], a[href*="/shorts/"]')
+		|| element.querySelector('a#thumbnail[href], a[href*="/watch"], a[href*="/shorts/"]')
+		|| element.closest('ytd-rich-grid-media, ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer')?.querySelector('a#thumbnail[href], a[href*="/watch"], a[href*="/shorts/"]')
+		|| null;
+};
+/*--------------------------------------------------------------
+# ADD "WATCH LATER" BUTTONS
+--------------------------------------------------------------*/
+extension.features.watchLaterButtons = function (event) {
+	function getVideoId(url) {
+		if (!url) {
+			return null;
+		}
+
+		var watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/),
+			shortsMatch = url.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+
+		return watchMatch ? watchMatch[1] : shortsMatch ? shortsMatch[1] : null;
+	}
+
+	function findThumbnail(target) {
+		while (target && target.parentNode) {
+			if (
+				target.nodeName === 'A' &&
+				target.href &&
+				(
+					target.id === 'thumbnail' ||
+					(target.className && typeof target.className === 'string' && (target.className.indexOf('thumb-link') !== -1 || target.className.indexOf('ytLockupViewModelContentImage') !== -1))
+				)
+			) {
+				return target;
+			}
+
+			target = target.parentNode;
+		}
+	}
+
+	function findNativeWatchLaterButton(thumbnail) {
+		var container = thumbnail.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, ytd-playlist-video-renderer, yt-lockup-view-model') || thumbnail,
+			button = container.querySelector('button[aria-label*="Watch later" i], button[title*="Watch later" i]');
+
+		if (button) {
+			return button;
+		}
+
+		var fallbackButton = thumbnail.querySelector('ytd-thumbnail-overlay-toggle-button-renderer button');
+
+		if (fallbackButton) {
+			var label = (fallbackButton.getAttribute('aria-label') || '').toLowerCase(),
+				title = (fallbackButton.getAttribute('title') || '').toLowerCase();
+
+			if (
+				label.indexOf('watch later') !== -1 ||
+				title.indexOf('watch later') !== -1 ||
+				(label.indexOf('queue') === -1 && title.indexOf('queue') === -1)
+			) {
+				return fallbackButton;
+			}
+		}
+	}
+
+	function getYtConfigValue(key) {
+		var pattern = new RegExp('"' + key + '":"([^"]+)"'),
+			scripts = document.scripts;
+
+		for (var i = 0, l = scripts.length; i < l; i++) {
+			var match = scripts[i].textContent.match(pattern);
+
+			if (match) {
+				return match[1];
+			}
+		}
+	}
+
+	function getYtConfigObject(key) {
+		var pattern = new RegExp('"' + key + '":(\\{.*?\\}),"' + key.replace(/_CONTEXT$/, '') + '_'),
+			scripts = document.scripts;
+
+		for (var i = 0, l = scripts.length; i < l; i++) {
+			var match = scripts[i].textContent.match(pattern);
+
+			if (match) {
+				try {
+					return JSON.parse(match[1]);
+				} catch (error) {
+					console.warn('[ImprovedTube] Unable to parse YouTube config object:', key, error);
+				}
+			}
+		}
+	}
+
+	function addWithInnertube(videoId, button) {
+		var apiKey = getYtConfigValue('INNERTUBE_API_KEY'),
+			context = getYtConfigObject('INNERTUBE_CONTEXT'),
+			clientVersion = getYtConfigValue('INNERTUBE_CLIENT_VERSION');
+
+		if (!context && clientVersion) {
+			context = {
+				client: {
+					clientName: 'WEB',
+					clientVersion: clientVersion
+				}
+			};
+		}
+
+		if (!apiKey || !context) {
+			console.warn('[ImprovedTube] Unable to resolve Innertube API key/context for Watch Later button');
+			button.dataset.state = 'unavailable';
+			return;
+		}
+
+		button.dataset.state = 'loading';
+
+		fetch('/youtubei/v1/browse/edit_playlist?key=' + apiKey, {
+			method: 'POST',
+			credentials: 'include',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				context: context,
+				playlistId: 'WL',
+				actions: [{
+					action: 'ACTION_ADD_VIDEO',
+					addedVideoId: videoId
+				}]
+			})
+		}).then(function (response) {
+			if (!response.ok) {
+				console.warn('[ImprovedTube] Innertube Watch Later request failed with status:', response.status);
+			}
+			button.dataset.state = response.ok ? 'added' : 'unavailable';
+		}).catch(function () {
+			button.dataset.state = 'unavailable';
+		});
+	}
+
+	function addWatchLaterButton(thumbnail) {
+		var videoId = thumbnail ? getVideoId(thumbnail.href) : null;
+
+		if (thumbnail && thumbnail.itWatchLaterButton && !thumbnail.contains(thumbnail.itWatchLaterButton)) {
+			thumbnail.itWatchLaterButton = null;
+		}
+
+		if (thumbnail && videoId && !thumbnail.itWatchLaterButton) {
+			var button = document.createElement('button'),
+				svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
+				path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+			button.type = 'button';
+			button.className = 'it-watch-later-button';
+			button.dataset.id = videoId;
+			button.title = 'Watch later';
+			button.setAttribute('aria-label', 'Add to Watch Later');
+
+			svg.setAttribute('viewBox', '0 0 24 24');
+			path.setAttribute('d', 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm0 18.2A8.2 8.2 0 1 1 20.2 12 8.2 8.2 0 0 1 12 20.2Zm.7-13.2h-1.8v5.8l5 3 .9-1.5-4.1-2.4Z');
+			svg.appendChild(path);
+			button.appendChild(svg);
+			thumbnail.appendChild(button);
+			thumbnail.itWatchLaterButton = button;
+
+			button.addEventListener('click', function (clickEvent) {
+				var nativeButton = findNativeWatchLaterButton(this.parentElement),
+					id = this.dataset.id;
+
+				clickEvent.preventDefault();
+				clickEvent.stopPropagation();
+				clickEvent.stopImmediatePropagation();
+
+				if (nativeButton && nativeButton !== this) {
+					var initialAriaPressed = nativeButton.getAttribute('aria-pressed'),
+						initialAriaLabel = nativeButton.getAttribute('aria-label'),
+						buttonRef = this,
+						attempts = 0;
+
+					nativeButton.click();
+
+					(function checkToggle() {
+						var currentAriaPressed = nativeButton.getAttribute('aria-pressed'),
+							currentAriaLabel = nativeButton.getAttribute('aria-label');
+
+						if (currentAriaPressed !== initialAriaPressed || currentAriaLabel !== initialAriaLabel) {
+							buttonRef.dataset.state = 'added';
+						} else if (attempts < 10) {
+							attempts++;
+							setTimeout(checkToggle, 100);
+						} else {
+							addWithInnertube(id, buttonRef);
+						}
+					})();
+				} else {
+					addWithInnertube(id, this);
+				}
+			});
+		}
+	}
+
+	function addWatchLaterButtons(root) {
+		var thumbnails = (root || document).querySelectorAll ? (root || document).querySelectorAll('a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage') : [];
+
+		for (var i = 0, l = thumbnails.length; i < l; i++) {
+			addWatchLaterButton(thumbnails[i]);
+		}
+	}
+
+	function removeWatchLaterButtons() {
+		var buttons = document.querySelectorAll('.it-watch-later-button');
+
+		for (var i = 0, l = buttons.length; i < l; i++) {
+			if (buttons[i].parentElement) {
+				buttons[i].parentElement.itWatchLaterButton = null;
+			}
+
+			buttons[i].remove();
+		}
+	}
+
+	if (event instanceof Event) {
+		if (event.type === 'mouseover' && event.target) {
+			addWatchLaterButton(findThumbnail(event.target));
+		}
+	} else {
+		var option = extension.storage.get('watch_later_buttons');
+
+		window.removeEventListener('mouseover', this.watchLaterButtons, true);
+
+		if (this.watchLaterButtons.observer) {
+			this.watchLaterButtons.observer.disconnect();
+			this.watchLaterButtons.observer = null;
+		}
+
+		if (!option || option === 'disabled') {
+			removeWatchLaterButtons();
+		} else if (option === 'hover' || option === 'always') {
+			window.addEventListener('mouseover', this.watchLaterButtons, true);
+
+			if (option === 'always') {
+				if (document.body) {
+					addWatchLaterButtons(document);
+					this.watchLaterButtons.observer = new MutationObserver(function (mutationList) {
+						for (var i = 0, l = mutationList.length; i < l; i++) {
+							for (var j = 0, m = mutationList[i].addedNodes.length; j < m; j++) {
+								addWatchLaterButtons(mutationList[i].addedNodes[j]);
+							}
+						}
+					});
+					this.watchLaterButtons.observer.observe(document.body, {
+						childList: true,
+						subtree: true
+					});
+				} else {
+					setTimeout(function () {
+						extension.features.watchLaterButtons();
+					}, 100);
+				}
+			}
 		}
 	}
 };
@@ -395,8 +666,8 @@ extension.features.triggerWatchLater = function (button) {
 		}));
 
 		// 6. Visual feedback on our button
-		button.classList.add('it-watch-later-added');
-		setTimeout(function () { button.classList.remove('it-watch-later-added'); }, 2000);
+		button.classList.add('it-thumb-wl-added');
+		setTimeout(function () { button.classList.remove('it-thumb-wl-added'); }, 2000);
 	}, 50);
 };
 
@@ -420,20 +691,20 @@ extension.features.watchLaterButton = function (event) {
 							container = target.querySelector('.yt-lockup-view-model__thumbnail-container') || target.querySelector('yt-thumbnail-view-model') || target;
 						}
 
-						if (container && !container.itWatchLaterButton && !container.closest('ytd-player')) {
-							container.itWatchLaterButton = document.createElement('button');
-							container.itWatchLaterButton.className = 'it-watch-later-button';
+						if (container && !container.itThumbWlButton && !container.closest('ytd-player')) {
+							container.itThumbWlButton = document.createElement('button');
+							container.itThumbWlButton.className = 'it-thumb-wl-button';
 
 							var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 							svg.setAttribute('viewBox', '0 0 24 24');
 							var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 							path.setAttribute('d', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
 							svg.appendChild(path);
-							container.itWatchLaterButton.appendChild(svg);
-							container.appendChild(container.itWatchLaterButton);
+							container.itThumbWlButton.appendChild(svg);
+							container.appendChild(container.itThumbWlButton);
 
 							// Mirror the working popupWindowButtons logic exactly
-							container.itWatchLaterButton.addEventListener('click', function (event) {
+							container.itThumbWlButton.addEventListener('click', function (event) {
 								event.preventDefault();
 								event.stopPropagation();
 
@@ -628,12 +899,12 @@ extension.features.thumbnailsQuality = function (anything) {
 
     function handler(thumbnail) {
         if (!thumbnail.dataset.defaultSrc && qualityRegex.test(thumbnail.src)) {
-            
-            var originalSrc = thumbnail.src; 
+
+            var originalSrc = thumbnail.src;
             thumbnail.dataset.defaultSrc = originalSrc;
 
             // Strip query parameters (?sqp=...) which often block maxresdefault upgrades
-            var cleanSrc = originalSrc.split('?')[0]; 
+            var cleanSrc = originalSrc.split('?')[0];
             var newSrc = cleanSrc.replace(qualityRegex, option + '.jpg');
 
             var tempImg = new Image();
@@ -641,7 +912,7 @@ extension.features.thumbnailsQuality = function (anything) {
             tempImg.onload = function () {
                 // Ensure DOM element hasn't been recycled while downloading
                 if (thumbnail.dataset.defaultSrc === originalSrc && this.naturalHeight > 90) {
-                    thumbnail.src = newSrc; 
+                    thumbnail.src = newSrc;
                 }
                 tempImg.onload = null;
                 tempImg.onerror = null;
@@ -700,10 +971,10 @@ extension.features.thumbnailsQuality = function (anything) {
 
                         // If the IDs differ (or aren't standard videos), clear the poisoned state
                         if (storedId !== currentId) {
-                            target.removeAttribute('data-default-src'); 
+                            target.removeAttribute('data-default-src');
                         }
                     }
-                    
+
                     handler(target);
                 }
             }
@@ -727,7 +998,7 @@ extension.features.thumbnailsQuality = function (anything) {
 
         if (this.thumbnailsQuality.observer) {
             this.thumbnailsQuality.observer.disconnect();
-            this.thumbnailsQuality.observer = null; 
+            this.thumbnailsQuality.observer = null;
         }
     }
 };
@@ -793,7 +1064,7 @@ if (extension.storage.get('mute_thumbnail_previews') === true) {
 		}
 	}
 
-	
+
 		// Mute any currently existing preview videos
 		mutePreviewVideos(document);
 
@@ -1044,7 +1315,8 @@ extension.features.removeMemberOnly = function () {
 				display: none !important;
 			}
 			ytd-grid-video-renderer:has(badge-shape.yt-badge-shape--membership),
-			ytd-rich-item-renderer:has(badge-shape.yt-badge-shape--membership) {
+			ytd-rich-item-renderer:has(badge-shape.yt-badge-shape--membership),
+			yt-lockup-view-model:has(badge-shape.yt-badge-shape--membership) {
 				display: none !important;
 			}
 		`;
@@ -1122,3 +1394,338 @@ extension.features.hideWatchLater = function () {
 
 // Start the check
 extension.features.hideWatchLater();
+
+/*--------------------------------------------------------------
+# AUTO VIDEO RECOVERY
+--------------------------------------------------------------*/
+
+extension.features.autoVideoRecovery = function () {
+    var feature = extension.features.autoVideoRecovery,
+        previousState = feature.state,
+        STALL_GRACE_MS = 8000,
+        NO_PROGRESS_MS = 10000,
+        RELOAD_DELAY_MS = 2000,
+        RELOAD_AFTER_ATTEMPTS = 3,
+        MAX_RETRY_DELAY_MS = 30000;
+
+    function clearTimer(state, name) {
+        if (state[name]) {
+            clearTimeout(state[name]);
+            state[name] = null;
+        }
+    }
+
+    function detachVideo(state) {
+        if (!state.video || !state.handlers) return;
+
+        for (var eventName in state.handlers) {
+            state.video.removeEventListener(eventName, state.handlers[eventName]);
+        }
+
+        state.video = null;
+        state.handlers = null;
+    }
+
+    function cleanup(state) {
+        if (!state) return;
+
+        state.active = false;
+        clearTimer(state, 'monitorTimer');
+        clearTimer(state, 'attachTimer');
+        clearTimer(state, 'reloadTimer');
+
+        if (state.observer) state.observer.disconnect();
+        if (state.onlineHandler) window.removeEventListener('online', state.onlineHandler);
+        if (state.reloadCleanup) state.reloadCleanup();
+
+        detachVideo(state);
+    }
+
+    cleanup(previousState);
+    feature.state = null;
+
+    if (extension.storage.get('auto_video_recovery') !== true) {
+        return;
+    }
+
+    var state = {
+        active: true,
+        attempts: 0,
+        attachTimer: null,
+        hasPlaybackProgress: false,
+        handlers: null,
+        hadMediaError: false,
+        lastErrorAt: 0,
+        lastProgressAt: 0,
+        lastTime: null,
+        monitorTimer: null,
+        nextAttemptAt: 0,
+        observer: null,
+        onlineHandler: null,
+        reloadCleanup: null,
+        reloadTimer: null,
+        reloading: false,
+        shouldResume: false,
+        stalledAt: 0,
+        video: null
+    };
+
+    feature.state = state;
+
+    function getVideo() {
+        return document.querySelector('#movie_player video.html5-main-video, #movie_player video') ||
+            document.querySelector('video.html5-main-video') || document.querySelector('video');
+    }
+
+    function stopMonitoring() {
+        clearTimer(state, 'monitorTimer');
+    }
+
+    function noteProgress() {
+        state.hasPlaybackProgress = true;
+        state.hadMediaError = false;
+        state.stalledAt = 0;
+        state.lastErrorAt = 0;
+        state.attempts = 0;
+        state.nextAttemptAt = 0;
+        state.lastProgressAt = Date.now();
+        stopMonitoring();
+    }
+
+    function scheduleMonitor(delay) {
+        if (!state.active || state.monitorTimer) return;
+
+        state.monitorTimer = setTimeout(function () {
+            state.monitorTimer = null;
+            attemptRecovery();
+        }, delay);
+    }
+
+    function markStalled(video) {
+        // `waiting` is normal while YouTube starts a video. Only recover a stream
+        // that has actually made progress and then stopped advancing.
+        if (!state.active || video !== state.video || video.ended || video.paused || !state.hasPlaybackProgress) return;
+
+        state.shouldResume = true;
+        if (!state.stalledAt) state.stalledAt = Date.now();
+        scheduleMonitor(STALL_GRACE_MS);
+    }
+
+    function restorePlaybackAfterReload(video, resumeAt) {
+        var completed = false;
+
+        function scheduleResumeRetry() {
+            if (!state.active || video !== state.video || !state.shouldResume) return;
+
+            state.stalledAt = state.stalledAt || Date.now();
+            scheduleMonitor(Math.max(1000, state.nextAttemptAt - Date.now()));
+        }
+
+        function finish() {
+            if (completed) return;
+            completed = true;
+            clearTimer(state, 'reloadTimer');
+            video.removeEventListener('canplay', finish);
+            state.reloadCleanup = null;
+            state.reloading = false;
+
+            if (!state.active || video !== state.video || !state.shouldResume) return;
+
+            if (Number.isFinite(resumeAt) && resumeAt > 0 && (!Number.isFinite(video.duration) || resumeAt < video.duration)) {
+                try { video.currentTime = resumeAt; } catch (_) { }
+            }
+
+            var playResult;
+            try {
+                playResult = video.play();
+            } catch (_) {
+                scheduleResumeRetry();
+                return;
+            }
+
+            if (playResult && typeof playResult.catch === 'function') {
+                playResult.catch(function () {
+                    // `load()` can abort a pending play request. This is expected
+                    // during recovery, so retry quietly instead of logging an error.
+                    scheduleResumeRetry();
+                });
+            }
+        }
+
+        state.reloadCleanup = function () {
+            video.removeEventListener('canplay', finish);
+        };
+        video.addEventListener('canplay', finish);
+        state.reloadTimer = setTimeout(finish, 5000);
+
+        try {
+            video.load();
+        } catch (_) {
+            finish();
+            scheduleResumeRetry();
+        }
+    }
+
+    function reloadVideo(video, resumeAt) {
+        if (!state.active || state.reloading || video !== state.video) return;
+
+        state.reloading = true;
+        restorePlaybackAfterReload(video, resumeAt);
+    }
+
+    function attemptRecovery() {
+        var video = state.video,
+            now = Date.now(),
+            noProgress;
+
+        if (!state.active || !video || video.ended || !state.shouldResume) return;
+
+        if (!navigator.onLine) {
+            scheduleMonitor(1000);
+            return;
+        }
+
+        noProgress = state.hasPlaybackProgress && !video.paused && state.lastProgressAt && now - state.lastProgressAt >= NO_PROGRESS_MS;
+        if (!state.stalledAt && !noProgress) return;
+
+        if (now < state.nextAttemptAt) {
+            scheduleMonitor(state.nextAttemptAt - now);
+            return;
+        }
+
+        state.attempts++;
+        state.nextAttemptAt = now + Math.min(MAX_RETRY_DELAY_MS, 1000 * Math.pow(2, Math.min(state.attempts, 5)));
+
+        var position = video.currentTime,
+            playResult;
+
+        function retryOrReload() {
+            if (!state.active || state.video !== video || !state.shouldResume) return;
+
+            if (state.hadMediaError || state.attempts >= RELOAD_AFTER_ATTEMPTS) {
+                reloadVideo(video, position);
+            } else {
+                scheduleMonitor(Math.max(1000, state.nextAttemptAt - Date.now()));
+            }
+        }
+
+        try {
+            playResult = video.play();
+        } catch (_) {
+            retryOrReload();
+            return;
+        }
+
+        if (playResult && typeof playResult.catch === 'function') {
+            playResult.catch(function () {
+                retryOrReload();
+            });
+        }
+
+        setTimeout(function () {
+            var stillStalled = state.active && state.video === video && state.shouldResume && !video.ended &&
+                !video.paused && (state.stalledAt || (state.lastProgressAt && Date.now() - state.lastProgressAt >= NO_PROGRESS_MS));
+
+            // Reloading the media element is disruptive and can restart normal
+            // startup buffering. Reserve it for a real media error or several
+            // failed, confirmed recovery attempts.
+            if (stillStalled && (state.hadMediaError || state.attempts >= RELOAD_AFTER_ATTEMPTS)) {
+                reloadVideo(video, position);
+            }
+        }, RELOAD_DELAY_MS);
+
+        scheduleMonitor(state.nextAttemptAt - now);
+    }
+
+    function attachVideo(video) {
+        if (!state.active || !video || state.video === video) return;
+
+        detachVideo(state);
+        state.video = video;
+        state.lastTime = video.currentTime;
+        state.lastProgressAt = Date.now();
+        state.hasPlaybackProgress = false;
+        state.hadMediaError = false;
+        state.shouldResume = !video.paused && !video.ended;
+
+        state.handlers = {
+            play: function () {
+                state.shouldResume = true;
+                state.lastProgressAt = Date.now();
+            },
+            loadedmetadata: function () {
+                // YouTube usually reuses the same <video> node between videos.
+                // Do not carry the previous video's playback state into startup.
+                state.hasPlaybackProgress = false;
+                state.hadMediaError = false;
+                state.lastTime = video.currentTime;
+                state.lastProgressAt = Date.now();
+                state.stalledAt = 0;
+                state.attempts = 0;
+                stopMonitoring();
+            },
+            playing: noteProgress,
+            timeupdate: function () {
+                if (video.currentTime !== state.lastTime) {
+                    state.lastTime = video.currentTime;
+                    noteProgress();
+                }
+            },
+            waiting: function () { markStalled(video); },
+            stalled: function () { markStalled(video); },
+            error: function () {
+                if (state.shouldResume || !video.paused) {
+                    state.shouldResume = true;
+                    state.hadMediaError = true;
+                    state.lastErrorAt = Date.now();
+                    state.stalledAt = Date.now();
+                    scheduleMonitor(STALL_GRACE_MS);
+                }
+            },
+            pause: function () {
+                // A media error can be followed immediately by a pause event.
+                // Do not mistake that pause for the user's explicit pause.
+                if (!state.reloading && (!state.lastErrorAt || Date.now() - state.lastErrorAt > 1000)) {
+                    state.shouldResume = false;
+                    state.stalledAt = 0;
+                    state.attempts = 0;
+                    stopMonitoring();
+                }
+            },
+            ended: function () {
+                state.shouldResume = false;
+                state.stalledAt = 0;
+                stopMonitoring();
+            }
+        };
+
+        for (var eventName in state.handlers) {
+            video.addEventListener(eventName, state.handlers[eventName]);
+        }
+    }
+
+    function queueVideoAttachment() {
+        if (!state.active || state.attachTimer) return;
+
+        state.attachTimer = setTimeout(function () {
+            state.attachTimer = null;
+            attachVideo(getVideo());
+        }, 50);
+    }
+
+    attachVideo(getVideo());
+
+    state.onlineHandler = function () {
+        if (!state.active || !state.shouldResume) return;
+
+        state.nextAttemptAt = 0;
+        scheduleMonitor(250);
+    };
+    window.addEventListener('online', state.onlineHandler);
+
+    state.observer = new MutationObserver(queueVideoAttachment);
+    state.observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+};

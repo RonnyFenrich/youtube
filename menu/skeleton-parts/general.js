@@ -78,6 +78,11 @@ extension.skeleton.main.layers.section.general = {
 					text: 'atSubscriptions',
 					id: 'remove-subscriptions-shorts'
 				},
+				remove_subscriptions_live_streams: {
+					component: 'switch',
+					text: 'removeSubscriptionsLiveStreams',
+					id: 'remove-subscriptions-live-streams'
+				},
 				remove_trending_shorts: {
 					component: 'switch',
 					text: 'atTrending'
@@ -90,6 +95,11 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'removePlayables',
 					id: 'remove-playables'
+				},
+				remove_top_live_games: {
+					component: 'switch',
+					text: 'removeTopLiveGames',
+					id: 'remove-top-live-games'
 				},
 				hide_ai_summary: {
 					component: 'switch',
@@ -254,6 +264,21 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'watchLaterButton',
 				},
+				watch_later_buttons: {
+					component: 'select',
+					text: 'watchLaterButtons',
+					options: [{
+						text: 'disabled',
+						value: 'disabled'
+					}, {
+						text: 'hover',
+						value: 'hover'
+					}, {
+						text: 'always',
+						value: 'always'
+					}],
+					tags: 'watch later save thumbnail'
+				},
 				hide_thumbnail_overlay: {
 					component: 'switch',
 					text: 'hideThumbnailOverlay',
@@ -268,6 +293,11 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'hideThumbnailDots',
 					tags: 'preview'
+				},
+				squared_thumbnails: {
+					component: 'switch',
+					text: 'squaredThumbnails',
+					tags: 'thumbnail square radius rounded corners'
 				},
 				thumbnails_quality: {
 					component: 'select',
@@ -291,7 +321,23 @@ extension.skeleton.main.layers.section.general = {
 						text: 'hd',
 						value: 'maxresdefault'
 					}],
-					tags: 'preview quality'
+					tags: 'preview quality',
+					on: {
+						render: function() {
+							var lowResolution = window.screen.width * window.screen.height * Math.pow(window.devicePixelRatio || 1, 2) < 2073600,
+								value = satus.storage.get('thumbnails_quality');
+							this.style.display = lowResolution ? 'none' : '';
+							if (lowResolution && value && value !== 'null') {
+								satus.storage.set('thumbnails_quality_previous', value);
+								satus.storage.set('thumbnails_quality', 'null');
+							} else {
+								var	previous = satus.storage.get('thumbnails_quality_previous');
+								if (!lowResolution && (!value || value === 'null') && previous) {
+								satus.storage.set('thumbnails_quality', previous);
+								}
+							}
+						}
+					}
 				},
 				change_thumbnails_per_row: {
 					component: 'select',
@@ -350,6 +396,16 @@ extension.skeleton.main.layers.section.general = {
 						{ text: "xx-small", value: "xx-small" }
 					]
 				},
+				larger_thumbnail_metadata: {
+					component: 'switch',
+					text: 'largerThumbnailMetadata',
+					tags: 'channel name views age font size metadata'
+				},
+				classic_thumbnail_metadata: {
+					component: 'switch',
+					text: 'classicThumbnailMetadata',
+					tags: 'thumbnail metadata views ago play icon interpunct dot divider classic restore'
+				},
 				show_last_watched_overlay: {
 					component: 'switch',
 					text: 'showLastWatchedOverlay',
@@ -377,6 +433,18 @@ extension.skeleton.main.layers.section.general = {
 						{ value: 'exact', text: 'exact' }
 					],
 					value: 'relative'
+				},
+				thumbnail_grayscale:{
+					component: 'select',
+					text: 'thumbnailGrayscale',
+					options: [
+						{ value: '0', text: 'Disabled'},
+						{ value: '25', text: '25%'},
+						{ value: '50', text: '50%'},
+						{ value: '75', text: '75%'},
+						{ value: '100', text: '100%'},
+
+					]
 				}
 			}, section_2: {
 				component: 'section',
@@ -408,7 +476,7 @@ extension.skeleton.main.layers.section.general = {
 				},
 				hide_watch_later: {
 					component: 'switch',
-					text: 'Hide Watch Later Videos'
+					text: 'hideWatchLaterVideos'
 				},
 				delete_watched_videos: {
 					component: 'button',
@@ -563,6 +631,11 @@ extension.skeleton.main.layers.section.general = {
 				category_refresh_button: {
 					component: 'switch',
 					text: 'categoryRefreshButton'
+				},
+				auto_video_recovery: {
+					component: 'switch',
+					text: 'autoVideoRecovery',
+					tags: 'network reconnect resume playback internet connection unstable'
 				}
 			}
 		}

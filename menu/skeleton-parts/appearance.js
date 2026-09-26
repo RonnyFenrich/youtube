@@ -153,7 +153,7 @@ extension.skeleton.main.layers.section.appearance.on.click.player = {
 						text: "fullWindow",
 						value: "full_window"
 					}, {
-						text: "Max. width within the page",
+						text: "maxWidthWithinPage",
 						value: "max_width"
 					}, {
 						text: "fitToWindow",
@@ -226,6 +226,10 @@ extension.skeleton.main.layers.section.appearance.on.click.player = {
 				player_hide_endscreen: {
 					component: "switch",
 					text: "hideEndscreen"
+				},
+				player_hide_lastframe: {
+					component: "switch",
+					text: "hideLastframe"
 				},
 				hide_includes_paid_promotion: {
 					component: 'switch',
@@ -418,7 +422,18 @@ extension.skeleton.main.layers.section.appearance.on.click.player = {
 				player_hd_thumbnail: {
 					component: "switch",
 					text: "hdThumbnail",
-					tags: "preview"
+					tags: "preview",
+					on: {
+						render: function() {
+							var maxPhysicalWidth = window.screen.width * (window.devicePixelRatio || 1);
+
+							if (maxPhysicalWidth < 1000) {
+								this.style.display = 'none';
+							} else {
+								this.style.display = '';
+							}
+						}
+					}
 				},
 				hide_scroll_for_details: {
 					component: "switch",
@@ -525,11 +540,6 @@ extension.skeleton.main.layers.section.appearance.on.click.player = {
 				text: "durationWithSpeed",
 				value: false
 			},
-			player_hd_thumbnail: {
-				component: "switch",
-				text: "hdThumbnail",
-				tags: "preview"
-			},
 			hide_scroll_for_details: {
 				component: "switch",
 				text: "hideScrollForDetails",
@@ -540,7 +550,7 @@ extension.skeleton.main.layers.section.appearance.on.click.player = {
 				text: "hideTopLoadingBar",
 				tags: "remove,hide"
 			}
-		},	
+		},
 			section_2: {
 				component: 'section',
 				variant: 'card',
@@ -614,10 +624,14 @@ extension.skeleton.main.layers.section.appearance.on.click.details = {
 					component: "switch",
 					text: "showExactDate"
 				},
-				channel_videos_count: {
-					component: "switch",
-					text: "showChannelVideosCount"
-				}
+			channel_videos_count: {
+				component: "switch",
+				text: "showChannelVideosCount"
+			},
+			cc_indicator: {
+				component: "switch",
+				text: "ccIndicator"
+			}
 			}
 		}
 	}
@@ -1046,6 +1060,10 @@ extension.skeleton.main.layers.section.appearance.on.click.sidebar = {
 					}
 				}
 			},
+			full_titles: {
+				component: "switch",
+				text: "dontShortenTitles"
+			},
 			sidebar_left: {
 				component: "switch",
 				text: "moveSidebarLeft"
@@ -1131,6 +1149,22 @@ extension.skeleton.main.layers.section.appearance.on.click.sidebar = {
 			hide_sidebar: {
 				component: "switch",
 				text: 'Hide_sidebar'
+			},
+			side_panels: {
+				component: "select",
+				text: "sidePanels",
+				options: [{
+					text: "normal",
+					value: "normal"
+				}, {
+					text: "collapsed",
+					value: "collapsed"
+				}],
+				tags: "right"
+			},
+			side_panels_only_one_expanded: {
+				component: "switch",
+				text: "sidePanelsOnlyOneExpanded"
 			}
 		}
 	}

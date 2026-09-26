@@ -188,6 +188,7 @@ ImprovedTube.init = function () {
 			ImprovedTube.playlistLargePlaylistHandler();
 		}
 		try { if (ImprovedTube.lastWatchedOverlay) ImprovedTube.lastWatchedOverlay(); } catch (e) { console.error('[LWO] page-data-updated error', e); }
+		try { if (ImprovedTube.videoFilters) ImprovedTube.videoFilters(); } catch (e) {}
 	});
 	this.pageType();
 	this.playerOnPlay();
@@ -221,7 +222,7 @@ ImprovedTube.init = function () {
 		}
 		ImprovedTube.playerQualityFullScreen();
 	}
-	if (ImprovedTube.storage.hide_pause_overlay) {this.hidePauseOverlay();}
+	ImprovedTube.playerAutoContinueWatching();
 };
 
 document.addEventListener('yt-navigate-finish', function () {
@@ -253,6 +254,7 @@ document.addEventListener('yt-navigate-finish', function () {
 	ImprovedTube.YouTubeExperiments();
 	ImprovedTube.commentsSidebar();
 	ImprovedTube.categoryRefreshButton();
+	ImprovedTube.playerAutoContinueWatching();
 	try { if (ImprovedTube.lastWatchedOverlay) ImprovedTube.lastWatchedOverlay(); } catch (e) { console.error('[LWO] nav-finish error', e); }
 
 	// Cleanup playlist handlers when navigating away from playlist pages
@@ -275,6 +277,7 @@ document.addEventListener('yt-navigate-finish', function () {
 	if (ImprovedTube.elements.player && ImprovedTube.elements.player.setPlaybackRate) {
 		ImprovedTube.videoPageUpdate();
 		ImprovedTube.initPlayer();
+		try { if (ImprovedTube.videoFilters) ImprovedTube.videoFilters(); } catch (e) {}
 	}
 	if (ImprovedTube.elements.shorts_player) {
 		ImprovedTube.redirectShortsToWatch();
