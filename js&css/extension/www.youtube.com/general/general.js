@@ -312,6 +312,149 @@ extension.features.popupWindowButtons = function (event) {
 	}
 };
 /*--------------------------------------------------------------
+# ADD "WATCH LATER" BUTTONS TO THUMBNAILS
+--------------------------------------------------------------*/
+extension.features.triggerWatchLater = function (button) {
+	// 1. Find the parent video renderer/model
+	var renderer = button.closest('yt-lockup-view-model') ||
+		button.closest('ytd-rich-item-renderer') ||
+		button.closest('ytd-video-renderer') ||
+		button.closest('ytd-grid-video-renderer') ||
+		button.closest('ytd-thumbnail');
+
+	if (!renderer) return;
+
+	// 2. Aggressive hover trigger for view models
+	var thumbnail = renderer.tagName === 'YTD-THUMBNAIL' ? renderer : renderer.querySelector('ytd-thumbnail, yt-thumbnail-view-model');
+	if (thumbnail && typeof thumbnail.hovered !== 'undefined') {
+		thumbnail.hovered = true;
+	}
+	renderer.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true }));
+
+	// 3. Try primary action: Find and click the native Watch Later icon
+	setTimeout(function () {
+		// New modern selectors (view-model overlays) + old renderer overlays
+		var overlays = [
+			'yt-thumbnail-overlay-view-model yt-icon-button-shape[aria-label="Watch later"]',
+			'ytd-thumbnail-overlay-toggle-button-renderer',
+			'button.ytp-watch-later-button', // In preview player
+			'a[aria-label="Watch later"]',
+			'button[aria-label="Watch later"]'
+		];
+
+		var found = false;
+		for (var i = 0; i < overlays.length; i++) {
+			var nativeBtn = renderer.querySelector(overlays[i]);
+			if (nativeBtn) {
+				// Handle both standard buttons and yt-icon-button-shape
+				var clickTarget = nativeBtn.querySelector('button, a') || nativeBtn;
+				clickTarget.click();
+				found = true;
+				break;
+			}
+		}
+
+		// 4. Fallback action: If no immediate shortcut, use the "More actions" menu
+		if (!found) {
+			var menuBtn = renderer.querySelector('button[aria-label="Action menu"]') ||
+				renderer.querySelector('button[aria-label="More actions"]') ||
+				renderer.querySelector('button.yt-icon-button');
+
+			if (menuBtn) {
+				menuBtn.click();
+				setTimeout(function () {
+					var items = document.querySelectorAll(
+						'tp-yt-paper-listbox ytd-menu-service-item-renderer,' +
+						'tp-yt-paper-listbox ytd-menu-navigation-item-renderer,' +
+						'ytd-menu-popup-renderer yt-list-item-view-model,' +
+						'ytd-popup-container yt-list-item-view-model'
+					);
+					for (var j = 0; j < items.length; j++) {
+						var txt = items[j].textContent.trim().toLowerCase();
+						if (txt.indexOf('watch later') !== -1 || txt === 'save to watch later') {
+							var itemBtn = items[j].querySelector('button, a') || items[j];
+							itemBtn.click();
+							found = true;
+							break;
+						}
+					}
+					// Close menu if it's still open and we didn't find the item
+					if (!found) document.body.click();
+				}, 100);
+			}
+		}
+
+		// 5. Native feedback: Always show the toast snackbar
+		document.dispatchEvent(new CustomEvent('yt-action', {
+			detail: {
+				actionName: 'yt-show-message-action',
+				args: [{ text: 'Added to Watch Later' }]
+			},
+			bubbles: true,
+			composed: true
+		}));
+
+		// 6. Visual feedback on our button
+		button.classList.add('it-watch-later-added');
+		setTimeout(function () { button.classList.remove('it-watch-later-added'); }, 2000);
+	}, 50);
+};
+
+extension.features.watchLaterButton = function (event) {
+	if (event instanceof Event) {
+		if (event.type === 'mouseover') {
+			if (event.target) {
+				var target = event.target,
+					detected = false;
+				while (detected === false && target.parentNode) {
+					// Detect modern YouTube thumbnail containers and models
+					if (target.className && typeof target.className === 'string' && (
+						(target.tagName === 'YT-LOCKUP-VIEW-MODEL' || target.tagName === 'YT-THUMBNAIL-VIEW-MODEL') ||
+						(target.id === 'thumbnail' && target.className.indexOf('ytd-thumbnail') !== -1) ||
+						(target.className.indexOf('thumb-link') !== -1) ||
+						(target.className.indexOf('video-preview') !== -1 || target.className.indexOf('ytp-inline-preview-scrim') !== -1 || target.className.indexOf('ytp-inline-preview-ui') !== -1)
+					)) {
+						// Ensure we append to a visible and interactive container
+						var container = target;
+						if (target.tagName === 'YT-LOCKUP-VIEW-MODEL') {
+							container = target.querySelector('.yt-lockup-view-model__thumbnail-container') || target.querySelector('yt-thumbnail-view-model') || target;
+						}
+
+						if (container && !container.itWatchLaterButton && !container.closest('ytd-player')) {
+							container.itWatchLaterButton = document.createElement('button');
+							container.itWatchLaterButton.className = 'it-watch-later-button';
+
+							var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+							svg.setAttribute('viewBox', '0 0 24 24');
+							var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+							path.setAttribute('d', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
+							svg.appendChild(path);
+							container.itWatchLaterButton.appendChild(svg);
+							container.appendChild(container.itWatchLaterButton);
+
+							// Mirror the working popupWindowButtons logic exactly
+							container.itWatchLaterButton.addEventListener('click', function (event) {
+								event.preventDefault();
+								event.stopPropagation();
+
+								extension.features.triggerWatchLater(this);
+							});
+						}
+						detected = true;
+					}
+					target = target.parentNode;
+				}
+			}
+		}
+	} else {
+		if (extension.storage.get('watch_later_button') === true) {
+			window.addEventListener('mouseover', this.watchLaterButton, true);
+		} else {
+			window.removeEventListener('mouseover', this.watchLaterButton, true);
+		}
+	}
+};
+/*--------------------------------------------------------------
 # FONT
 --------------------------------------------------------------*/
 

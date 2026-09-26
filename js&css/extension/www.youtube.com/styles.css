@@ -710,6 +710,55 @@ html:not([data-page-type=channel]) .it-blocklisted-channel:hover ytd-thumbnail {
 	z-index: 1002;
 }
 
+.improvedtube-remove-btn {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	border: none !important;
+	border-radius: 18px !important;
+	padding: 0 16px !important;
+	height: 36px !important;
+	background-color: var(--yt-spec-badge-chip-background, rgba(0, 0, 0, 0.05)) !important;
+	color: var(--yt-spec-text-primary) !important;
+	font-family: Roboto, Arial, sans-serif !important;
+	font-size: 14px !important;
+	font-weight: 500 !important;
+	white-space: nowrap !important;
+	margin-left: 8px !important;
+	cursor: pointer;
+}
+
+.improvedtube-remove-btn .yt-spec-button-shape-next__icon {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin-right: 6px !important;
+	height: 24px !important;
+}
+
+.improvedtube-remove-btn .yt-spec-button-shape-next__button-text-content {
+	display: flex !important;
+	align-items: center !important;
+	line-height: 1 !important;
+}
+
+.improvedtube-remove-btn:hover::after {
+	content: attr(data-tooltip);
+	position: absolute;
+	top: calc(100% + 14px);
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 8px;
+	background-color: rgb(96, 96, 96);
+	color: rgb(255, 255, 255);
+	border-radius: 4px;
+	font-size: 12px;
+	font-family: Roboto, Arial, sans-serif;
+	white-space: nowrap;
+	z-index: 1002;
+	pointer-events: none;
+}
+
 /*------------------------------------------------------------------------------
 3.0 THEMES
 ------------------------------------------------------------------------------*/

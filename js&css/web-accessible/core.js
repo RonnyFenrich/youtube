@@ -437,6 +437,15 @@ document.addEventListener('it-message-from-extension', function () {
 					}
 					break
 
+				case 'removeFromPlaylist':
+					if (ImprovedTube.storage.remove_from_playlist === false) {
+						document.querySelector('.improvedtube-player-button[data-tooltip="Remove from current playlist"]')?.remove();
+					} else if (ImprovedTube.storage.remove_from_playlist === true) {
+						document.querySelectorAll('.improvedtube-player-button').forEach(e => e.remove());
+						ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer();
+					}
+					break
+
 				case 'copyTranscript':
 					if (ImprovedTube.storage.copy_transcript === false) {
 						document.querySelector('.improvedtube-player-button[data-tooltip="CopyTranscript"]')?.remove();
