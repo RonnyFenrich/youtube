@@ -1,3 +1,16 @@
+## About this fork
+
+This is a fork of [code-charity/youtube](https://github.com/code-charity/youtube) (ImprovedTube). It adds these features to the original:
+
+| Feature | Where to find it | What it does |
+|---|---|---|
+| **Watch Later button on thumbnails (menu-based)** | General → Thumbnails → *Add a 'Watch Later' button to each thumbnail (menu-based)* | Shows a clock button in the top-left of a video thumbnail when you hover over it. Clicking it adds the video to Watch Later, using YouTube's own Watch Later overlay or, if that isn't there, the thumbnail's "More actions" menu, and shows a confirmation toast. This is separate from upstream's *Add a Watch Later button to thumbnails* option, and the two can be used side by side. |
+| **Remove from playlist** | Player → Extra buttons below the player → *🗑️ Remove from playlist* | When you watch a video from a playlist, adds a **Remove** button below the player that takes the current video out of that playlist. |
+
+The rest of this README is the upstream project's original documentation.
+
+---
+
 <!-- * * * * * * * * * *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 (For some quick editing, text might be at the start of lines, while html is at the end.)
    * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * --> 
