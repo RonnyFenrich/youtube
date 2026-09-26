@@ -700,7 +700,8 @@ ImprovedTube.removeFromPlaylistButton = function () {
 	if (window.self !== window.top) { return; }
 
 	var button = document.querySelector('#it-below-player-remove-from-playlist'),
-		section = document.querySelector('ytd-watch-metadata #subscribe-button') || document.querySelector('#subscribe-button');
+		// Only the real one: a bare #subscribe-button can match the hidden loading skeleton.
+		section = document.querySelector('ytd-watch-metadata #subscribe-button');
 
 	// Check the URL itself: dataset.pageType can still describe the previous page mid-navigation.
 	if (this.storage.remove_from_playlist !== true || location.pathname !== '/watch' || !location.search.match(this.regex.playlist_id)) {
@@ -708,7 +709,13 @@ ImprovedTube.removeFromPlaylistButton = function () {
 		return;
 	}
 
-	if (button || !section) { return; }
+	if (!section) { return; }
+
+	if (button) {
+		// Re-renders can leave it detached or in a stale spot.
+		if (button.previousElementSibling !== section) { section.insertAdjacentElement('afterend', button); }
+		return;
+	}
 
 	button = document.createElement('button');
 	button.className = 'yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading improvedtube-remove-btn';
