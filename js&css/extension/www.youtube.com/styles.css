@@ -711,8 +711,35 @@ html:not([data-page-type=channel]) .it-blocklisted-channel:hover ytd-thumbnail {
 }
 
 .improvedtube-remove-btn {
-	position: relative;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	border: none !important;
+	border-radius: 18px !important;
+	padding: 0 16px !important;
+	height: 36px !important;
+	background-color: var(--yt-spec-badge-chip-background, rgba(0, 0, 0, 0.05)) !important;
+	color: var(--yt-spec-text-primary) !important;
+	font-family: Roboto, Arial, sans-serif !important;
+	font-size: 14px !important;
+	font-weight: 500 !important;
+	white-space: nowrap !important;
+	margin-left: 8px !important;
 	cursor: pointer;
+}
+
+.improvedtube-remove-btn .yt-spec-button-shape-next__icon {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	margin-right: 6px !important;
+	height: 24px !important;
+}
+
+.improvedtube-remove-btn .yt-spec-button-shape-next__button-text-content {
+	display: flex !important;
+	align-items: center !important;
+	line-height: 1 !important;
 }
 
 .improvedtube-remove-btn:hover::after {

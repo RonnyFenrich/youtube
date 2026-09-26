@@ -574,30 +574,22 @@ ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer = function () {
 			if (this.storage.remove_from_playlist === true && isPlaylist) {
 				if (!existingRemoveBtn) {
 					var button = document.createElement('button');
-					button.className = 'yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading yt-spec-button-shape-next--enable-backdrop-filter-experiment improvedtube-remove-btn';
+					button.className = 'yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading improvedtube-remove-btn';
 					button.id = 'it-below-player-remove-from-playlist';
 					button.dataset.tooltip = 'Remove from current playlist';
-					button.style.marginLeft = '8px';
 
 					var iconDiv = document.createElement('div');
 					iconDiv.className = 'yt-spec-button-shape-next__icon';
 					
 					var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 					svg.setAttributeNS(null, 'viewBox', '0 0 24 24');
+					svg.setAttribute('width', '24');
+					svg.setAttribute('height', '24');
 					var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 					path.setAttributeNS(null, 'd', 'M15 4V3H9v1H4v2h1v13c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V6h1V4h-5zm2 15H7V6h10v13z M9 8h2v9H9V8zm4 0h2v9h-2V8z');
 					path.style.fill = 'currentColor';
 					svg.appendChild(path);
-					
-					var iconSpan = document.createElement('span');
-					iconSpan.className = 'ytIconWrapperHost';
-					iconSpan.style.display = 'flex';
-					iconSpan.style.alignItems = 'center';
-					iconSpan.style.justifyContent = 'center';
-					iconSpan.style.width = '24px';
-					iconSpan.style.height = '24px';
-					iconSpan.appendChild(svg);
-					iconDiv.appendChild(iconSpan);
+					iconDiv.appendChild(svg);
 
 					var textDiv = document.createElement('div');
 					textDiv.className = 'yt-spec-button-shape-next__button-text-content';
