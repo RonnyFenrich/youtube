@@ -201,6 +201,7 @@ ImprovedTube.init = function () {
 	this.YouTubeExperiments();
 	this.channelCompactTheme();
 	this.categoryRefreshButton();
+	this.preventPlayerFocusScroll();
 	if (ImprovedTube.elements.player && ImprovedTube.elements.player.setPlaybackRate) {
 		ImprovedTube.videoPageUpdate();
 		ImprovedTube.initPlayer();

@@ -1164,6 +1164,9 @@
   "pressAnyKeyOrUseMouseWheel": {
     "message": "Press any key or use mouse wheel"
   },
+  "preventPlayerFocusScroll": {
+    "message": "Don't jump back to the player when a menu closes"
+  },
   "preventShortVideoAutoloop": {
     "message": "Prevent short videos from auto-looping"
   },

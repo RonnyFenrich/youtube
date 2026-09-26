@@ -423,6 +423,17 @@ extension.skeleton.main.layers.section.shortcuts = {
 					component: 'shortcut',
 					text: 'refreshCategories'
 				}
+			},
+			settingsSection: {
+				component: 'section',
+				variant: 'card',
+				title: 'settings',
+
+				prevent_player_focus_scroll: {
+					component: 'switch',
+					text: 'preventPlayerFocusScroll',
+					value: false
+				}
 			}
 		}
 	},

@@ -6,6 +6,7 @@ This is a fork of [code-charity/youtube](https://github.com/code-charity/youtube
 |---|---|---|
 | **Watch Later button on thumbnails (menu-based)** | General → Thumbnails → *Add a 'Watch Later' button to each thumbnail (menu-based)* | Shows a clock button in the top-left of a video thumbnail when you hover over it. Clicking it adds the video to Watch Later, using YouTube's own Watch Later overlay or, if that isn't there, the thumbnail's "More actions" menu, and shows a confirmation toast. This is separate from upstream's *Add a Watch Later button to thumbnails* option, and the two can be used side by side. |
 | **Remove from playlist** | Player → Extra buttons below the player → *🗑️ Remove from playlist* | When you watch a video from a playlist, adds a **Remove** button below the player that takes the current video out of that playlist. |
+| **Don't jump back to the player when a menu closes** | Shortcuts → Settings → *Don't jump back to the player when a menu closes* | After you click the video (for example to pause it), YouTube's menus give focus back to the player when they close, which scrolls the page up to it. This stops that scroll, so removing a video from the playlist sidebar keeps your place. Keyboard shortcuts still work. |
 
 The rest of this README is the upstream project's original documentation.
 

@@ -774,6 +774,24 @@ ImprovedTube.removeFromPlaylistButton = function () {
 	window.addEventListener('yt-page-data-updated', function () { sync(0); });
 })();
 /*------------------------------------------------------------------------------
+ PREVENT PLAYER FOCUS SCROLL
+------------------------------------------------------------------------------*/
+// YouTube's menus hand focus back to the player when they close, which scrolls it into view.
+ImprovedTube.preventPlayerFocusScroll = function () {
+	var player = this.elements.player;
+
+	if (!player) { return; }
+
+	if (this.storage.prevent_player_focus_scroll === true) {
+		// Resolve the prototype's focus at call time so forbidFocus() still applies.
+		player.focus = function (options) {
+			return HTMLElement.prototype.focus.call(this, Object.assign({}, options, { preventScroll: true }));
+		};
+	} else if (Object.prototype.hasOwnProperty.call(player, 'focus')) {
+		delete player.focus;
+	}
+};
+/*------------------------------------------------------------------------------
  EXPAND DESCRIPTION
 ------------------------------------------------------------------------------*/
 ImprovedTube.expandDescription = function (el) {
