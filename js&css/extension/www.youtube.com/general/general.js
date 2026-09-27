@@ -1254,18 +1254,15 @@ extension.features.changeThumbnailsPerRow = async function () {
 				}
 			});
 		} else {
-			const grid = document.querySelector('ytd-rich-grid-renderer');
-			if (grid) {
-				// Apply custom values
+			// Pages visited earlier stay in the DOM (hidden), so the first match may not be the visible grid
+			document.querySelectorAll('ytd-rich-grid-renderer').forEach(grid => {
 				grid.style.setProperty('--ytd-rich-grid-items-per-row', value);
 				grid.style.setProperty('--ytd-rich-grid-item-min-width', '220px');
 				grid.style.setProperty('--ytd-rich-grid-item-max-width', '1fr');
-			}
-			const shelf = document.querySelector('ytd-rich-shelf-renderer');
-			if (shelf) {
-				// Apply custom values
+			});
+			document.querySelectorAll('ytd-rich-shelf-renderer').forEach(shelf => {
 				shelf.style.setProperty('--ytd-rich-grid-items-per-row', value);
-			}
+			});
 		}
 	};
 
