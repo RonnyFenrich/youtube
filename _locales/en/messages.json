@@ -66,6 +66,9 @@
   "alwaysActive": {
     "message": "Always active"
   },
+  "alwaysKeepPlaylistOpen": {
+    "message": "📂 Always keep playlist open"
+  },
   "alwaysShowProgressBar": {
     "message": "Always show Progress Bar"
   },
@@ -1165,7 +1168,7 @@
     "message": "Press any key or use mouse wheel"
   },
   "preventPlayerFocusScroll": {
-    "message": "Don't jump back to the player when a menu closes"
+    "message": "⚓ Don't jump back to the player when a menu closes"
   },
   "preventShortVideoAutoloop": {
     "message": "Prevent short videos from auto-looping"
@@ -1633,7 +1636,7 @@
     "message": "Watch later"
   },
   "watchLaterButton": {
-    "message": "Add a 'Watch Later' button to each thumbnail (menu-based)"
+    "message": "🕒 Add a 'Watch Later' button to each thumbnail"
   },
   "watchTime": {
     "message": "Watch time"

@@ -781,6 +781,54 @@ ImprovedTube.removeFromPlaylistButton = function () {
 	window.addEventListener('yt-page-data-updated', function () { sync(0); });
 })();
 /*------------------------------------------------------------------------------
+ ALWAYS KEEP PLAYLIST OPEN
+------------------------------------------------------------------------------*/
+// The panel is reused across videos, so a collapsed state carries over to the next one.
+ImprovedTube.alwaysKeepPlaylistOpen = function () {
+	var panel = document.querySelector('ytd-watch-flexy ytd-playlist-panel-renderer#playlist');
+
+	if (!panel || this.storage.always_keep_playlist_open !== true) { return; }
+
+	if (!panel.itKeepOpen) {
+		panel.itKeepOpen = { userToggledAt: 0 };
+		panel.addEventListener('click', function (event) {
+			if (event.target.closest('#header-contents, .header')) {
+				panel.itKeepOpen.userToggledAt = Date.now();
+			}
+		}, true);
+		new MutationObserver(function () {
+			if (panel.collapsed && Date.now() - panel.itKeepOpen.userToggledAt > 500) {
+				ImprovedTube.alwaysKeepPlaylistOpen();
+			}
+		}).observe(panel, { attributes: true, attributeFilter: ['collapsed'] });
+	}
+
+	if (panel.collapsed) {
+		panel.collapsed = false;
+	}
+};
+
+(function () {
+	var timer, navigatedAt = 0;
+
+	// The panel can render late, so retry; stop if the user collapses it in the meantime.
+	function sync(attempt) {
+		var panel = document.querySelector('ytd-watch-flexy ytd-playlist-panel-renderer#playlist');
+
+		clearTimeout(timer);
+		if (panel && panel.itKeepOpen && panel.itKeepOpen.userToggledAt > navigatedAt) { return; }
+		ImprovedTube.alwaysKeepPlaylistOpen();
+		if (attempt < 6) {
+			timer = setTimeout(function () { sync(attempt + 1); }, 500);
+		}
+	}
+
+	window.addEventListener('yt-navigate-finish', function () {
+		navigatedAt = Date.now();
+		sync(0);
+	});
+})();
+/*------------------------------------------------------------------------------
  PREVENT PLAYER FOCUS SCROLL
 ------------------------------------------------------------------------------*/
 // YouTube's menus hand focus back to the player when they close, which scrolls it into view.

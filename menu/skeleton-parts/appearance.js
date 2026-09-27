@@ -1165,6 +1165,10 @@ extension.skeleton.main.layers.section.appearance.on.click.sidebar = {
 			side_panels_only_one_expanded: {
 				component: "switch",
 				text: "sidePanelsOnlyOneExpanded"
+			},
+			always_keep_playlist_open: {
+				component: "switch",
+				text: "alwaysKeepPlaylistOpen"
 			}
 		}
 	}
