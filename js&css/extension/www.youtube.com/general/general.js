@@ -359,106 +359,6 @@ extension.features.watchLaterButtons = function (event) {
 		}
 	}
 
-	function findNativeWatchLaterButton(thumbnail) {
-		var container = thumbnail.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, ytd-playlist-video-renderer, yt-lockup-view-model') || thumbnail,
-			button = container.querySelector('button[aria-label*="Watch later" i], button[title*="Watch later" i]');
-
-		if (button) {
-			return button;
-		}
-
-		var fallbackButton = thumbnail.querySelector('ytd-thumbnail-overlay-toggle-button-renderer button');
-
-		if (fallbackButton) {
-			var label = (fallbackButton.getAttribute('aria-label') || '').toLowerCase(),
-				title = (fallbackButton.getAttribute('title') || '').toLowerCase();
-
-			if (
-				label.indexOf('watch later') !== -1 ||
-				title.indexOf('watch later') !== -1 ||
-				(label.indexOf('queue') === -1 && title.indexOf('queue') === -1)
-			) {
-				return fallbackButton;
-			}
-		}
-	}
-
-	function getYtConfigValue(key) {
-		var pattern = new RegExp('"' + key + '":"([^"]+)"'),
-			scripts = document.scripts;
-
-		for (var i = 0, l = scripts.length; i < l; i++) {
-			var match = scripts[i].textContent.match(pattern);
-
-			if (match) {
-				return match[1];
-			}
-		}
-	}
-
-	function getYtConfigObject(key) {
-		var pattern = new RegExp('"' + key + '":(\\{.*?\\}),"' + key.replace(/_CONTEXT$/, '') + '_'),
-			scripts = document.scripts;
-
-		for (var i = 0, l = scripts.length; i < l; i++) {
-			var match = scripts[i].textContent.match(pattern);
-
-			if (match) {
-				try {
-					return JSON.parse(match[1]);
-				} catch (error) {
-					console.warn('[ImprovedTube] Unable to parse YouTube config object:', key, error);
-				}
-			}
-		}
-	}
-
-	function addWithInnertube(videoId, button) {
-		var apiKey = getYtConfigValue('INNERTUBE_API_KEY'),
-			context = getYtConfigObject('INNERTUBE_CONTEXT'),
-			clientVersion = getYtConfigValue('INNERTUBE_CLIENT_VERSION');
-
-		if (!context && clientVersion) {
-			context = {
-				client: {
-					clientName: 'WEB',
-					clientVersion: clientVersion
-				}
-			};
-		}
-
-		if (!apiKey || !context) {
-			console.warn('[ImprovedTube] Unable to resolve Innertube API key/context for Watch Later button');
-			button.dataset.state = 'unavailable';
-			return;
-		}
-
-		button.dataset.state = 'loading';
-
-		fetch('/youtubei/v1/browse/edit_playlist?key=' + apiKey, {
-			method: 'POST',
-			credentials: 'include',
-			headers: {
-				'content-type': 'application/json'
-			},
-			body: JSON.stringify({
-				context: context,
-				playlistId: 'WL',
-				actions: [{
-					action: 'ACTION_ADD_VIDEO',
-					addedVideoId: videoId
-				}]
-			})
-		}).then(function (response) {
-			if (!response.ok) {
-				console.warn('[ImprovedTube] Innertube Watch Later request failed with status:', response.status);
-			}
-			button.dataset.state = response.ok ? 'added' : 'unavailable';
-		}).catch(function () {
-			button.dataset.state = 'unavailable';
-		});
-	}
-
 	function addWatchLaterButton(thumbnail) {
 		var videoId = thumbnail ? getVideoId(thumbnail.href) : null;
 
@@ -485,37 +385,20 @@ extension.features.watchLaterButtons = function (event) {
 			thumbnail.itWatchLaterButton = button;
 
 			button.addEventListener('click', function (clickEvent) {
-				var nativeButton = findNativeWatchLaterButton(this.parentElement),
-					id = this.dataset.id;
+				var buttonRef = this;
 
 				clickEvent.preventDefault();
 				clickEvent.stopPropagation();
 				clickEvent.stopImmediatePropagation();
 
-				if (nativeButton && nativeButton !== this) {
-					var initialAriaPressed = nativeButton.getAttribute('aria-pressed'),
-						initialAriaLabel = nativeButton.getAttribute('aria-label'),
-						buttonRef = this,
-						attempts = 0;
+				buttonRef.dataset.state = 'loading';
 
-					nativeButton.click();
-
-					(function checkToggle() {
-						var currentAriaPressed = nativeButton.getAttribute('aria-pressed'),
-							currentAriaLabel = nativeButton.getAttribute('aria-label');
-
-						if (currentAriaPressed !== initialAriaPressed || currentAriaLabel !== initialAriaLabel) {
-							buttonRef.dataset.state = 'added';
-						} else if (attempts < 10) {
-							attempts++;
-							setTimeout(checkToggle, 100);
-						} else {
-							addWithInnertube(id, buttonRef);
-						}
-					})();
-				} else {
-					addWithInnertube(id, this);
-				}
+				extension.features.addToWatchLater(buttonRef.dataset.id).then(function () {
+					buttonRef.dataset.state = 'added';
+				}).catch(function (error) {
+					console.warn('[ImprovedTube] Watch Later add failed:', error);
+					buttonRef.dataset.state = 'unavailable';
+				});
 			});
 		}
 	}
@@ -586,76 +469,32 @@ extension.features.watchLaterButtons = function (event) {
 # ADD "WATCH LATER" BUTTONS TO THUMBNAILS
 --------------------------------------------------------------*/
 extension.features.triggerWatchLater = function (button) {
-	// 1. Find the parent video renderer/model
-	var renderer = button.closest('yt-lockup-view-model') ||
-		button.closest('ytd-rich-item-renderer') ||
-		button.closest('ytd-video-renderer') ||
-		button.closest('ytd-grid-video-renderer') ||
-		button.closest('ytd-thumbnail');
+	var videoLink = 'a[href*="/watch?v="], a[href*="/shorts/"]',
+		source = button;
 
-	if (!renderer) return;
+	// The hover preview is a shared overlay under ytd-app, so use the thumbnail underneath it
+	if (button.closest('ytd-video-preview')) {
+		var rect = button.getBoundingClientRect(),
+			stack = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
 
-	// 2. Aggressive hover trigger for view models
-	var thumbnail = renderer.tagName === 'YTD-THUMBNAIL' ? renderer : renderer.querySelector('ytd-thumbnail, yt-thumbnail-view-model');
-	if (thumbnail && typeof thumbnail.hovered !== 'undefined') {
-		thumbnail.hovered = true;
+		source = null;
+		for (var i = 0; i < stack.length && !source; i++) {
+			if (!stack[i].closest('ytd-video-preview')) {
+				source = stack[i].closest('yt-lockup-view-model, ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer');
+			}
+		}
 	}
-	renderer.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, cancelable: true }));
 
-	// 3. Try primary action: Find and click the native Watch Later icon
-	setTimeout(function () {
-		// New modern selectors (view-model overlays) + old renderer overlays
-		var overlays = [
-			'yt-thumbnail-overlay-view-model yt-icon-button-shape[aria-label="Watch later"]',
-			'ytd-thumbnail-overlay-toggle-button-renderer',
-			'button.ytp-watch-later-button', // In preview player
-			'a[aria-label="Watch later"]',
-			'button[aria-label="Watch later"]'
-		];
+	var renderer = source && source.closest('yt-lockup-view-model, ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer'),
+		link = source && (source.closest(videoLink) || (renderer || source.parentElement).querySelector(videoLink)),
+		match = link && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
 
-		var found = false;
-		for (var i = 0; i < overlays.length; i++) {
-			var nativeBtn = renderer.querySelector(overlays[i]);
-			if (nativeBtn) {
-				// Handle both standard buttons and yt-icon-button-shape
-				var clickTarget = nativeBtn.querySelector('button, a') || nativeBtn;
-				clickTarget.click();
-				found = true;
-				break;
-			}
-		}
+	if (!match) {
+		console.warn('[ImprovedTube] Watch Later button: no video ID found');
+		return;
+	}
 
-		// 4. Fallback action: If no immediate shortcut, use the "More actions" menu
-		if (!found) {
-			var menuBtn = renderer.querySelector('button[aria-label="Action menu"]') ||
-				renderer.querySelector('button[aria-label="More actions"]') ||
-				renderer.querySelector('button.yt-icon-button');
-
-			if (menuBtn) {
-				menuBtn.click();
-				setTimeout(function () {
-					var items = document.querySelectorAll(
-						'tp-yt-paper-listbox ytd-menu-service-item-renderer,' +
-						'tp-yt-paper-listbox ytd-menu-navigation-item-renderer,' +
-						'ytd-menu-popup-renderer yt-list-item-view-model,' +
-						'ytd-popup-container yt-list-item-view-model'
-					);
-					for (var j = 0; j < items.length; j++) {
-						var txt = items[j].textContent.trim().toLowerCase();
-						if (txt.indexOf('watch later') !== -1 || txt === 'save to watch later') {
-							var itemBtn = items[j].querySelector('button, a') || items[j];
-							itemBtn.click();
-							found = true;
-							break;
-						}
-					}
-					// Close menu if it's still open and we didn't find the item
-					if (!found) document.body.click();
-				}, 100);
-			}
-		}
-
-		// 5. Native feedback: Always show the toast snackbar
+	extension.features.addToWatchLater(match[1]).then(function () {
 		document.dispatchEvent(new CustomEvent('yt-action', {
 			detail: {
 				actionName: 'yt-show-message-action',
@@ -665,10 +504,65 @@ extension.features.triggerWatchLater = function (button) {
 			composed: true
 		}));
 
-		// 6. Visual feedback on our button
 		button.classList.add('it-thumb-wl-added');
 		setTimeout(function () { button.classList.remove('it-thumb-wl-added'); }, 2000);
-	}, 50);
+	}).catch(function (error) {
+		console.warn('[ImprovedTube] Watch Later add failed:', error);
+	});
+};
+
+// Calls the add endpoint directly: YouTube's own buttons toggle, and would remove videos already saved
+extension.features.addToWatchLater = function (videoId) {
+	var scripts = Array.prototype.map.call(document.scripts, function (script) { return script.textContent; }).join('\n');
+
+	function config(key) {
+		var match = scripts.match(new RegExp('"' + key + '":(?:"([^"]*)"|(\\d+))'));
+
+		return match ? match[1] || match[2] : undefined;
+	}
+
+	var sapisid = (document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/) || [])[1],
+		clientVersion = config('INNERTUBE_CLIENT_VERSION'),
+		timestamp = Math.floor(Date.now() / 1000);
+
+	if (!sapisid || !clientVersion) {
+		return Promise.reject('not signed in or YouTube config missing');
+	}
+
+	return crypto.subtle.digest('SHA-1', new TextEncoder().encode(timestamp + ' ' + sapisid + ' ' + location.origin)).then(function (hash) {
+		var hex = Array.from(new Uint8Array(hash), function (byte) { return byte.toString(16).padStart(2, '0'); }).join(''),
+			headers = {
+				'Content-Type': 'application/json',
+				'Authorization': 'SAPISIDHASH ' + timestamp + '_' + hex,
+				'X-Origin': location.origin,
+				'X-Goog-AuthUser': config('SESSION_INDEX') || '0',
+				'X-YouTube-Client-Name': '1',
+				'X-YouTube-Client-Version': clientVersion
+			},
+			// Brand accounts: without this the video lands in the main account's Watch Later
+			pageId = config('DELEGATED_SESSION_ID');
+
+		if (pageId) {
+			headers['X-Goog-PageId'] = pageId;
+		}
+
+		return fetch('/youtubei/v1/browse/edit_playlist?prettyPrint=false', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: headers,
+			body: JSON.stringify({
+				context: { client: { clientName: 'WEB', clientVersion: clientVersion, hl: config('HL') || 'en' } },
+				playlistId: 'WL',
+				actions: [{ action: 'ACTION_ADD_VIDEO', addedVideoId: videoId }]
+			})
+		});
+	}).then(function (response) {
+		return response.ok ? response.json() : Promise.reject('HTTP ' + response.status);
+	}).then(function (data) {
+		if (data.status && data.status !== 'STATUS_SUCCEEDED') {
+			return Promise.reject(data.status);
+		}
+	});
 };
 
 extension.features.watchLaterButton = function (event) {
@@ -679,12 +573,12 @@ extension.features.watchLaterButton = function (event) {
 					detected = false;
 				while (detected === false && target.parentNode) {
 					// Detect modern YouTube thumbnail containers and models
-					if (target.className && typeof target.className === 'string' && (
+					// Match the preview host only: every child carries the "ytd-video-preview" style-scope class
+					if (target.tagName === 'YTD-VIDEO-PREVIEW' || (target.className && typeof target.className === 'string' && (
 						(target.tagName === 'YT-LOCKUP-VIEW-MODEL' || target.tagName === 'YT-THUMBNAIL-VIEW-MODEL') ||
 						(target.id === 'thumbnail' && target.className.indexOf('ytd-thumbnail') !== -1) ||
-						(target.className.indexOf('thumb-link') !== -1) ||
-						(target.className.indexOf('video-preview') !== -1 || target.className.indexOf('ytp-inline-preview-scrim') !== -1 || target.className.indexOf('ytp-inline-preview-ui') !== -1)
-					)) {
+						(target.className.indexOf('thumb-link') !== -1)
+					))) {
 						// Ensure we append to a visible and interactive container
 						var container = target;
 						if (target.tagName === 'YT-LOCKUP-VIEW-MODEL') {

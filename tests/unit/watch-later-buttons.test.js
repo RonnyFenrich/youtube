@@ -25,9 +25,9 @@ describe('Watch Later thumbnail buttons', () => {
 		expect(generalSkeleton).toContain("value: 'always'");
 	});
 
-	test('uses the native Watch Later control before the Innertube fallback', () => {
-		expect(generalJs).toContain('findNativeWatchLaterButton');
-		expect(generalJs).toContain('nativeButton.click();');
+	test('adds via Innertube only, never clicking the native toggle', () => {
+		expect(generalJs).not.toContain('findNativeWatchLaterButton');
+		expect(generalJs).not.toContain('nativeButton.click();');
 		expect(generalJs).toContain('ACTION_ADD_VIDEO');
 		expect(generalJs).toContain("playlistId: 'WL'");
 	});
