@@ -586,14 +586,11 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 .it-thumb-wl-button {
 	font-family: inherit;
 
-	position: absolute;
-	z-index: 999 !important;
-	top: 8px;
-	left: 8px;
-	opacity: 0;
-	transition: opacity 4s;
+	/* Above the hover preview, below the masthead (2020) */
+	position: fixed;
+	z-index: 2000 !important;
 
-	display: flex;
+	display: none;
 	align-items: center;
 	justify-content: center;
 	width: 40px;
@@ -608,6 +605,10 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	background: rgba(0, 0, 0, .6);
 }
 
+.it-thumb-wl-button.it-thumb-wl-visible {
+	display: flex;
+}
+
 .it-thumb-wl-button:hover {
 	background: rgba(0, 0, 0, .8);
 }
@@ -619,11 +620,6 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	pointer-events: none;
 
 	fill: currentColor;
-}
-
-*:hover>.it-thumb-wl-button {
-	opacity: 1 !important;
-	transition: opacity 0s;
 }
 
 .it-thumb-wl-button.it-thumb-wl-added {

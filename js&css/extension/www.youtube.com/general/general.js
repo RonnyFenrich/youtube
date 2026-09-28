@@ -468,49 +468,6 @@ extension.features.watchLaterButtons = function (event) {
 /*--------------------------------------------------------------
 # ADD "WATCH LATER" BUTTONS TO THUMBNAILS
 --------------------------------------------------------------*/
-extension.features.triggerWatchLater = function (button) {
-	var videoLink = 'a[href*="/watch?v="], a[href*="/shorts/"]',
-		source = button;
-
-	// The hover preview is a shared overlay under ytd-app, so use the thumbnail underneath it
-	if (button.closest('ytd-video-preview')) {
-		var rect = button.getBoundingClientRect(),
-			stack = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-
-		source = null;
-		for (var i = 0; i < stack.length && !source; i++) {
-			if (!stack[i].closest('ytd-video-preview')) {
-				source = stack[i].closest('yt-lockup-view-model, ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer');
-			}
-		}
-	}
-
-	var renderer = source && source.closest('yt-lockup-view-model, ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer'),
-		link = source && (source.closest(videoLink) || (renderer || source.parentElement).querySelector(videoLink)),
-		match = link && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
-
-	if (!match) {
-		console.warn('[ImprovedTube] Watch Later button: no video ID found');
-		return;
-	}
-
-	extension.features.addToWatchLater(match[1]).then(function () {
-		document.dispatchEvent(new CustomEvent('yt-action', {
-			detail: {
-				actionName: 'yt-show-message-action',
-				args: [{ text: 'Added to Watch Later' }]
-			},
-			bubbles: true,
-			composed: true
-		}));
-
-		button.classList.add('it-thumb-wl-added');
-		setTimeout(function () { button.classList.remove('it-thumb-wl-added'); }, 2000);
-	}).catch(function (error) {
-		console.warn('[ImprovedTube] Watch Later add failed:', error);
-	});
-};
-
 // Calls the add endpoint directly: YouTube's own buttons toggle, and would remove videos already saved
 extension.features.addToWatchLater = function (videoId) {
 	var scripts = Array.prototype.map.call(document.scripts, function (script) { return script.textContent; }).join('\n');
@@ -565,59 +522,119 @@ extension.features.addToWatchLater = function (videoId) {
 	});
 };
 
+// One shared button positioned over the hovered thumbnail: the hover preview is an overlay outside the card,
+// so a button inside the card loses :hover under it and the preview would get a second one
 extension.features.watchLaterButton = function (event) {
+	var feature = extension.features.watchLaterButton;
+
 	if (event instanceof Event) {
 		if (event.type === 'mouseover') {
-			if (event.target) {
-				var target = event.target,
-					detected = false;
-				while (detected === false && target.parentNode) {
-					// Detect modern YouTube thumbnail containers and models
-					// Match the preview host only: every child carries the "ytd-video-preview" style-scope class
-					if (target.tagName === 'YTD-VIDEO-PREVIEW' || (target.className && typeof target.className === 'string' && (
-						(target.tagName === 'YT-LOCKUP-VIEW-MODEL' || target.tagName === 'YT-THUMBNAIL-VIEW-MODEL') ||
-						(target.id === 'thumbnail' && target.className.indexOf('ytd-thumbnail') !== -1) ||
-						(target.className.indexOf('thumb-link') !== -1)
-					))) {
-						// Ensure we append to a visible and interactive container
-						var container = target;
-						if (target.tagName === 'YT-LOCKUP-VIEW-MODEL') {
-							container = target.querySelector('.yt-lockup-view-model__thumbnail-container') || target.querySelector('yt-thumbnail-view-model') || target;
-						}
+			var target = event.target;
 
-						if (container && !container.itThumbWlButton && !container.closest('ytd-player')) {
-							container.itThumbWlButton = document.createElement('button');
-							container.itThumbWlButton.className = 'it-thumb-wl-button';
-
-							var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-							svg.setAttribute('viewBox', '0 0 24 24');
-							var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-							path.setAttribute('d', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
-							svg.appendChild(path);
-							container.itThumbWlButton.appendChild(svg);
-							container.appendChild(container.itThumbWlButton);
-
-							// Mirror the working popupWindowButtons logic exactly
-							container.itThumbWlButton.addEventListener('click', function (event) {
-								event.preventDefault();
-								event.stopPropagation();
-
-								extension.features.triggerWatchLater(this);
-							});
-						}
-						detected = true;
-					}
-					target = target.parentNode;
-				}
+			if (!(target instanceof Element) || (feature.button && feature.button.contains(target))) {
+				return;
 			}
+
+			if (target.closest('ytd-video-preview')) {
+				target = document.elementsFromPoint(event.clientX, event.clientY).find(function (element) {
+					return !element.closest('ytd-video-preview');
+				});
+			}
+
+			var thumbnail = target && target.closest('ytd-thumbnail, yt-thumbnail-view-model, a.thumb-link');
+
+			feature.show(thumbnail && !thumbnail.closest('ytd-player') ? thumbnail : null);
+		} else if (event.type === 'mouseout') {
+			if (!event.relatedTarget) {
+				feature.show(null);
+			}
+		} else if (feature.thumbnail) {
+			feature.show(feature.thumbnail);
 		}
 	} else {
-		if (extension.storage.get('watch_later_button') === true) {
-			window.addEventListener('mouseover', this.watchLaterButton, true);
-		} else {
-			window.removeEventListener('mouseover', this.watchLaterButton, true);
+		var enabled = extension.storage.get('watch_later_button') === true;
+
+		['mouseover', 'mouseout', 'scroll', 'resize'].forEach(function (type) {
+			window[enabled ? 'addEventListener' : 'removeEventListener'](type, feature, { capture: true, passive: true });
+		});
+
+		if (!enabled) {
+			feature.show(null);
 		}
 	}
+};
+
+extension.features.watchLaterButton.show = function (thumbnail) {
+	var button = this.button,
+		rect = thumbnail && thumbnail.isConnected && thumbnail.getBoundingClientRect();
+
+	if (button && thumbnail !== this.thumbnail) {
+		button.classList.remove('it-thumb-wl-added');
+	}
+
+	this.thumbnail = rect && rect.width ? thumbnail : null;
+
+	if (!this.thumbnail) {
+		if (button) {
+			button.classList.remove('it-thumb-wl-visible');
+		}
+
+		return;
+	}
+
+	if (!button) {
+		button = this.button = this.create();
+	}
+
+	if (!button.isConnected) {
+		document.body.appendChild(button);
+	}
+
+	button.style.top = rect.top + 8 + 'px';
+	button.style.left = rect.left + 8 + 'px';
+	button.classList.add('it-thumb-wl-visible');
+};
+
+extension.features.watchLaterButton.create = function () {
+	var feature = this,
+		button = document.createElement('button'),
+		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
+		path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+	button.type = 'button';
+	button.className = 'it-thumb-wl-button';
+	button.title = 'Watch later';
+	svg.setAttribute('viewBox', '0 0 24 24');
+	path.setAttribute('d', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
+	svg.appendChild(path);
+	button.appendChild(svg);
+
+	button.addEventListener('click', function (event) {
+		var thumbnail = feature.thumbnail,
+			link = thumbnail && extension.features.popupWindowButtons.findVideoLink(thumbnail),
+			match = link && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (!match) {
+			console.warn('[ImprovedTube] Watch Later button: no video ID found');
+			return;
+		}
+
+		extension.features.addToWatchLater(match[1]).then(function () {
+			extension.messages.send({ action: 'show-snackbar', text: 'Saved to Watch later', videoId: match[1] });
+
+			if (feature.thumbnail === thumbnail) {
+				button.classList.add('it-thumb-wl-added');
+				setTimeout(function () { button.classList.remove('it-thumb-wl-added'); }, 2000);
+			}
+		}).catch(function (error) {
+			console.warn('[ImprovedTube] Watch Later add failed:', error);
+		});
+	});
+
+	return button;
 };
 /*--------------------------------------------------------------
 # FONT
