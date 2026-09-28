@@ -8,6 +8,7 @@ This is a fork of [code-charity/youtube](https://github.com/code-charity/youtube
 | **Remove from playlist** | Player → Extra buttons below the player → *🗑️ Remove from playlist* | When you watch a video from a playlist, adds a **Remove** button below the player that takes the current video out of that playlist. |
 | **⚓ Don't jump back to the player when a menu closes** | Shortcuts → Settings → *⚓ Don't jump back to the player when a menu closes* | After you click the video (for example to pause it), YouTube's menus give focus back to the player when they close, which scrolls the page up to it. This stops that scroll, so removing a video from the playlist sidebar keeps your place. Keyboard shortcuts still work. |
 | **📂 Always keep playlist open** | Appearance → Sidebar → *📂 Always keep playlist open* | Stops the playlist in the sidebar from staying collapsed. If YouTube collapses it on its own, or it was collapsed when you move to the next video, it opens again. You can still collapse and expand it by hand. |
+| **⏸️ Auto pause mini player** | Player → *⏸️ Auto pause mini player* | When you leave a video for another page, for example by clicking the YouTube logo to go Home, YouTube keeps playing it in a small player in the bottom-right corner. This pauses it as soon as it moves there. You can press play in the small player to keep watching. |
 
 The rest of this README is the upstream project's original documentation.
 

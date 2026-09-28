@@ -2103,6 +2103,10 @@ extension.skeleton.main.layers.section.player.on.click = {
 			on: {
 				click: 'main.layers.section.appearance.on.click.player.on.click.player_hide_controls_options.on.click'
 			}
+		},
+		auto_pause_mini_player: {
+			component: 'switch',
+			text: 'autoPauseMiniPlayer'
 		}
 	}
 };

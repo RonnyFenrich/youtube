@@ -4932,3 +4932,27 @@ ImprovedTube.playerAutoContinueWatching = function () {
 		});
 	}
 };
+/*------------------------------------------------------------------------------
+AUTO PAUSE MINI PLAYER
+------------------------------------------------------------------------------*/
+// Pause only on entering the mini player, so the user can still resume it there.
+(function () {
+	var observedApp = null;
+
+	function attach() {
+		var app = document.querySelector('ytd-app');
+
+		if (!app || app === observedApp) { return; }
+		observedApp = app;
+
+		new MutationObserver(function () {
+			var player = ImprovedTube.elements.player;
+
+			if (ImprovedTube.storage.auto_pause_mini_player === true && app.hasAttribute('miniplayer-is-active') && player && typeof player.pauseVideo === 'function') {
+				player.pauseVideo();
+			}
+		}).observe(app, { attributes: true, attributeFilter: ['miniplayer-is-active'] });
+	}
+
+	document.addEventListener('yt-navigate-finish', attach);
+})();

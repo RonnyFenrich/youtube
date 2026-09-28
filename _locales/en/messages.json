@@ -147,6 +147,9 @@
   "autoPictureInPicture": {
     "message": "Auto Picture-In-Picture"
   },
+  "autoPauseMiniPlayer": {
+    "message": "⏸️ Auto pause mini player"
+  },
   "autoplay": {
     "message": "Autoplay"
   },
