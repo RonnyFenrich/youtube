@@ -415,6 +415,17 @@ extension.skeleton.main.layers.section.shortcuts = {
 					component: 'shortcut',
 					text: 'subscribe'
 				},
+				shortcut_remove_from_playlist: {
+					component: 'shortcut',
+					text: 'removeFromPlaylist',
+					value: {
+						keys: {
+							82: {
+								key: 'r'
+							}
+						}
+					}
+				},
 				shortcut_dark_theme: {
 					component: 'shortcut',
 					text: 'darkTheme'

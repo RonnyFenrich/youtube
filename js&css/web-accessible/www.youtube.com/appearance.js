@@ -696,6 +696,22 @@ ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer = function () {
 /*------------------------------------------------------------------------------
  REMOVE FROM PLAYLIST BUTTON
 ------------------------------------------------------------------------------*/
+ImprovedTube.removeFromPlaylist = function () {
+	var activePlaylistItemButton = document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer button') || document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer yt-icon-button');
+	if (activePlaylistItemButton) {
+		activePlaylistItemButton.click();
+		setTimeout(function() {
+			var menuItems = document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string');
+			for (var i = 0; i < menuItems.length; i++) {
+				if (menuItems[i].textContent.includes('Remove from')) {
+					menuItems[i].click();
+					break;
+				}
+			}
+		}, 150);
+	}
+};
+
 ImprovedTube.removeFromPlaylistButton = function () {
 	if (window.self !== window.top) { return; }
 
@@ -743,19 +759,7 @@ ImprovedTube.removeFromPlaylistButton = function () {
 	button.appendChild(textDiv);
 
 	button.onclick = function () {
-		var activePlaylistItemButton = document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer button') || document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer yt-icon-button');
-		if (activePlaylistItemButton) {
-			activePlaylistItemButton.click();
-			setTimeout(function() {
-				var menuItems = document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string');
-				for (var i = 0; i < menuItems.length; i++) {
-					if (menuItems[i].textContent.includes('Remove from')) {
-						menuItems[i].click();
-						break;
-					}
-				}
-			}, 150);
-		}
+		ImprovedTube.removeFromPlaylist();
 		button.dataset.tooltip = 'Removed!';
 		setTimeout(function() {
 			button.dataset.tooltip = 'Remove from current playlist';

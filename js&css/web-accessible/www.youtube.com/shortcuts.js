@@ -13,8 +13,12 @@ ImprovedTube.shortcutsInit = function () {
 
 	// reset 'listening' shortcuts
 	for (var key in listening) delete listening[key];
+	// Menu defaults aren't written to storage, so ones YouTube doesn't handle natively must be applied here.
+	const defaults = {
+		shortcut_remove_from_playlist: {keys: {82: {key: 'r'}}}
+	};
 	// extract shortcuts from User Settings and initialize 'listening'
-	for (const [name, keys] of Object.entries(this.storage).filter(v => v[0].startsWith('shortcut_'))) {
+	for (const [name, keys] of Object.entries({...defaults, ...this.storage}).filter(v => v[0].startsWith('shortcut_'))) {
 		if (!keys) continue;
 		// camelCase(name)
 		const camelName = name.replace(/_(.)/g, (m, l) => l.toUpperCase());
@@ -542,6 +546,12 @@ ImprovedTube.shortcutReport = function () {
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutSubscribe = function () {
 	this.elements.subscribe_button?.click();
+};
+/*------------------------------------------------------------------------------
+REMOVE FROM PLAYLIST
+------------------------------------------------------------------------------*/
+ImprovedTube.shortcutRemoveFromPlaylist = function () {
+	this.removeFromPlaylist();
 };
 /*------------------------------------------------------------------------------
 4.7.25 DARK THEME
