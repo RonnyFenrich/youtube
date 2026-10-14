@@ -996,14 +996,28 @@ ImprovedTube.playerVideoFiltersButton = function () {
 
 		svg.appendChild(path);
 
-		const isActive = this.storage.video_filters_activate !== false && 
-			(this.storage.video_filters_preset !== 'normal' || 
-			 (Number(this.storage.video_filter_brightness) !== 100 && this.isset(this.storage.video_filter_brightness)) ||
-			 (Number(this.storage.video_filter_contrast) !== 100 && this.isset(this.storage.video_filter_contrast)) ||
-			 (Number(this.storage.video_filter_saturation) !== 100 && this.isset(this.storage.video_filter_saturation)) ||
-			 (Number(this.storage.video_filter_hue) !== 0 && this.isset(this.storage.video_filter_hue)) ||
-			 (Number(this.storage.video_filter_sharpness) > 0 && this.isset(this.storage.video_filter_sharpness)) ||
-			 (Number(this.storage.video_filter_gamma) !== 1 && this.isset(this.storage.video_filter_gamma)));
+		const preset = this.storage.video_filters_preset || 'normal';
+		let b = 100, c = 100, s = 100, h = 0, sh = 0, g = 1;
+
+		if (preset === 'vivid') {
+			b = 105; c = 115; s = 140; h = 0; sh = 1; g = 1;
+		} else if (preset === 'cinema') {
+			b = 95; c = 120; s = 85; h = 0; sh = 0.5; g = 1.1;
+		} else if (preset === 'warm') {
+			b = 100; c = 105; s = 115; h = -10; sh = 0; g = 1;
+		} else if (preset === 'cool') {
+			b = 102; c = 105; s = 105; h = 10; sh = 0; g = 1;
+		} else if (preset === 'custom') {
+			b = Number(this.storage.video_filter_brightness); if (!isFinite(b)) b = 100;
+			c = Number(this.storage.video_filter_contrast); if (!isFinite(c)) c = 100;
+			s = Number(this.storage.video_filter_saturation); if (!isFinite(s)) s = 100;
+			h = Number(this.storage.video_filter_hue); if (!isFinite(h)) h = 0;
+			sh = Number(this.storage.video_filter_sharpness); if (!isFinite(sh)) sh = 0;
+			g = Number(this.storage.video_filter_gamma); if (!isFinite(g)) g = 1;
+		}
+
+		const isActive = this.storage.video_filters_activate === true &&
+			!(b === 100 && c === 100 && s === 100 && h === 0 && sh === 0 && g === 1);
 
 		this.createPlayerButton({
 			id: 'it-video-filters-button',
@@ -1016,20 +1030,40 @@ ImprovedTube.playerVideoFiltersButton = function () {
 					let nextIdx = (presets.indexOf(current) + 1) % presets.length;
 					let nextPreset = presets[nextIdx];
 					ImprovedTube.storage.video_filters_preset = nextPreset;
-					ImprovedTube.storage.video_filters_activate = true;
+					ImprovedTube.storage.video_filters_activate = nextPreset !== 'normal';
 					ImprovedTube.messages.send({ action: 'set', key: 'video_filters_preset', value: nextPreset });
-					ImprovedTube.messages.send({ action: 'set', key: 'video_filters_activate', value: true });
+					ImprovedTube.messages.send({ action: 'set', key: 'video_filters_activate', value: ImprovedTube.storage.video_filters_activate });
 					ImprovedTube.videoFilters();
 					ImprovedTube.showStatus('Filter: ' + nextPreset.toUpperCase());
 				} else {
-					ImprovedTube.storage.video_filters_activate = ImprovedTube.storage.video_filters_activate === false ? true : false;
-					ImprovedTube.messages.send({ action: 'set', key: 'video_filters_activate', value: ImprovedTube.storage.video_filters_activate });
+					const newState = ImprovedTube.storage.video_filters_activate !== true;
+					ImprovedTube.storage.video_filters_activate = newState;
+					if (newState && (!ImprovedTube.storage.video_filters_preset || ImprovedTube.storage.video_filters_preset === 'normal') &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_brightness) &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_contrast) &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_saturation) &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_hue) &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_sharpness) &&
+						!ImprovedTube.isset(ImprovedTube.storage.video_filter_gamma)) {
+						ImprovedTube.storage.video_filters_preset = 'vivid';
+						ImprovedTube.messages.send({ action: 'set', key: 'video_filters_preset', value: 'vivid' });
+					}
+					ImprovedTube.messages.send({ action: 'set', key: 'video_filters_activate', value: newState });
 					ImprovedTube.videoFilters();
-					ImprovedTube.showStatus('Filters: ' + (ImprovedTube.storage.video_filters_activate ? 'ON' : 'OFF'));
+					ImprovedTube.showStatus('Filters: ' + (newState ? 'ON' : 'OFF'));
 				}
 			},
 			title: 'Video Filters (Click: Toggle, Shift+Click: Cycle Presets)'
 		});
+
+		const btn = document.querySelector('#it-video-filters-button');
+		if (btn) {
+			if (isActive) {
+				btn.classList.add('it-video-filters-active');
+			} else {
+				btn.classList.remove('it-video-filters-active');
+			}
+		}
 	}
 };
 /*------------------------------------------------------------------------------
@@ -1196,139 +1230,98 @@ ImprovedTube.playerVolumeBoostButton = function () {
 /*------------------------------------------------------------------------------
 PLAYBACK SPEED BUTTON
 ------------------------------------------------------------------------------*/
+ImprovedTube.playerPlaybackSpeedButtonUpdate = function () {
+	const button = ImprovedTube.elements.buttons['it-playback-speed-button'];
+	const textElement = button?.querySelector('.it-playback-speed-text');
+	if (textElement) {
+		textElement.textContent = (ImprovedTube.playerPlaybackSpeedButtonVideo?.playbackRate || 1.0).toFixed(2);
+	}
+};
+
 ImprovedTube.playerPlaybackSpeedButton = function () {
 	if (this.storage.player_playback_speed_button === true) {
-		var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
-			path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+		this.playerPlaybackSpeedButtonVideo?.removeEventListener('ratechange', this.playerPlaybackSpeedButtonUpdate);
+		delete this.playerPlaybackSpeedButtonVideo;
 
-		svg.setAttributeNS(null, 'viewBox', '0 0 24 24');
-		path.setAttributeNS(null, 'd', 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z');
+		const svgNS = 'http://www.w3.org/2000/svg';
+		const svg = document.createElementNS(svgNS, 'svg');
+		const meter = document.createElementNS(svgNS, 'path');
+		const needle = document.createElementNS(svgNS, 'path');
+		const text = document.createElementNS(svgNS, 'text');
+		svg.setAttribute('viewBox', '0 0 200 200');
+		meter.setAttribute('d', 'M 20 100 A 80 80 0 0 1 180 100 M 32 100 L 45 100 M 41 66 L 52 73 M 66 41 L 73 52 M 100 32 L 100 46 M 134 41 L 127 52 M 159 66 L 148 73 M 168 100 L 155 100');
+		meter.setAttribute('fill', 'none');
+		meter.setAttribute('stroke', 'currentColor');
+		meter.setAttribute('stroke-width', '10');
+		meter.setAttribute('stroke-linecap', 'round');
+		needle.setAttribute('d', 'M 96 102 L 139 70 L 104 108 Z M 109 103 A 9 9 0 1 1 91 103 A 9 9 0 1 1 109 103 Z');
+		needle.setAttribute('fill', 'currentColor');
+		needle.setAttribute('stroke', 'currentColor');
+		needle.setAttribute('stroke-width', '3');
+		needle.setAttribute('stroke-linejoin', 'round');
+		text.setAttribute('class', 'it-playback-speed-text');
+		text.setAttribute('x', '100');
+		text.setAttribute('y', '180');
+		text.setAttribute('text-anchor', 'middle');
+		text.setAttribute('font-family', 'sans-serif');
+		text.setAttribute('font-size', '60');
+		text.setAttribute('font-weight', '900');
+		text.setAttribute('fill', 'currentColor');
+		text.setAttribute('style', 'font-variant-numeric: tabular-nums;');
+		text.textContent = '1.00';
+		svg.append(meter, needle, text);
 
-		svg.appendChild(path);
-
-		var button = this.createPlayerButton({
+		const button = this.createPlayerButton({
 			id: 'it-playback-speed-button',
 			child: svg,
-			opacity: 0.7,
+			opacity: 1,
 			onclick: function (e) {
 				// Left click: set to custom speed from settings
 				if (e.button === 0) {
-					var customSpeed = ImprovedTube.storage.player_playback_speed || 1.25;
+					const customSpeed = ImprovedTube.storage.player_custom_playback_speed || 1.25;
 					ImprovedTube.playbackSpeed(customSpeed);
-					ImprovedTube.showStatus(customSpeed + 'x');
+					ImprovedTube.showStatus(customSpeed.toFixed(2) + 'x');
 				}
 			},
-			title: 'Playback Speed (Scroll: adjust, Left: custom, Right: 1.0x)'
+			title: 'Playback Speed Control (Scroll: adjust, Left: custom, Right: 1.0x)'
 		});
+
+		if (!button) return;
 
 		// Add right-click handler
 		button.addEventListener('contextmenu', function (e) {
 			e.preventDefault();
 			e.stopPropagation();
 			ImprovedTube.playbackSpeed(1.0);
-			ImprovedTube.showStatus('1.0x');
+			ImprovedTube.showStatus('1.00x');
 		});
 
 		// Add wheel handler
 		button.addEventListener('wheel', function (e) {
 			e.preventDefault();
 			e.stopPropagation();
-			var step = Number(ImprovedTube.storage.shortcuts_playback_speed_step) || 0.1;
-			var currentSpeed = ImprovedTube.playbackSpeed();
-			var newSpeed;
+			const step = Number(ImprovedTube.storage.player_playback_speed_step) || 0.25;
+			const currentSpeed = ImprovedTube.playbackSpeed();
+			let newSpeed;
 
 			if (e.deltaY < 0) {
 				// Scroll up: increase speed
 				newSpeed = Math.min(currentSpeed + step, 16);
 			} else {
 				// Scroll down: decrease speed
-				newSpeed = Math.max(currentSpeed - step, 0.0625);
+				// Match the slider minimum and avoid the rounding offset caused by Chromium's 0.0625 minimum.
+				newSpeed = Math.max(currentSpeed - step, 0.1);
 			}
 
 			ImprovedTube.playbackSpeed(newSpeed);
 			ImprovedTube.showStatus(newSpeed.toFixed(2) + 'x');
 		});
+
+		this.playerPlaybackSpeedButtonVideo = this.elements.video;
+		this.playerPlaybackSpeedButtonVideo?.addEventListener('ratechange', this.playerPlaybackSpeedButtonUpdate);
+		this.playerPlaybackSpeedButtonUpdate(); // Set initial value
 	}
 };
-
-ImprovedTube.playerPlaybackSpeedButtonB = function () {
-  if (this.storage.player_playback_speed_button_b === true) {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-
-    svg.setAttribute("viewBox", "0 0 36 36");
-    svg.style.width = "100%";
-    svg.style.height = "100%";
-
-    // Simple speedometer icon
-    path.setAttribute(
-      "d",
-      "M25.9,13.1A8.2,8.2,0,0,0,18,10a8.2,8.2,0,0,0-7.9,3.1L8,12.2V22h9.8l-1-2H10v-2h3.3l1.1-2.2a6.1,6.1,0,0,1,11.2,0L26.7,18H30v2H21.8l-1-2h4.1A8.2,8.2,0,0,0,25.9,13.1Z"
-    );
-    path.setAttribute("fill", "#fff");
-
-    // Text element to show current speed
-    text.setAttribute("x", "18");
-    text.setAttribute("y", "23");
-    text.setAttribute("font-size", "8px");
-    text.setAttribute("font-weight", "bold");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("fill", "#fff");
-    text.setAttribute("class", "it-speed-text");
-    text.textContent = (this.elements.video?.playbackRate || 1.0).toFixed(2);
-
-    svg.appendChild(path);
-    svg.appendChild(text);
-
-    const button = this.createPlayerButton({
-      id: "it-playback-speed-button",
-      child: svg,
-      opacity: 0.85,
-      title: "Playback Speed Control",
-    });
-
-    const updateSpeedText = () => {
-      const currentSpeed = (this.elements.video?.playbackRate || 1.0).toFixed(
-        2
-      );
-      if (button) {
-        const textElement = button.querySelector(".it-speed-text");
-        if (textElement) textElement.textContent = currentSpeed;
-      }
-    };
-
-    // --- Event Listeners ---
-    button.onclick = () => {
-      const customSpeed = this.storage.player_custom_playback_speed || 1.25;
-      this.playbackSpeed(customSpeed);
-    };
-
-    button.oncontextmenu = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.playbackSpeed(1.0);
-      return false;
-    };
-
-    button.onwheel = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const currentSpeed = this.playbackSpeed();
-      const direction = e.deltaY < 0 ? 1 : -1;
-      let newSpeed = Math.round((currentSpeed + direction * 0.05) * 100) / 100;
-
-      if (newSpeed > 4) newSpeed = 4;
-      if (newSpeed < 0.1) newSpeed = 0.1;
-
-      this.playbackSpeed(newSpeed);
-    };
-
-    this.elements.video.addEventListener("ratechange", updateSpeedText);
-    updateSpeedText(); // Set initial value
-  }
-};
-
 
 /*------------------------------------------------------------------------------
 FIT-TO-WIN BUTTON
@@ -4186,13 +4179,12 @@ SMART SPEED ENGINE
         _baseRate() { return toNum(ImprovedTube.storage.player_custom_playback_speed, 1, 0.0625, 16); },
 
         _setRate(rate) {
-            const v = this._getVideo();
-            if (!v || Math.abs(v.playbackRate - rate) < 0.01) return;
-            this.expectedRate = rate;
-            v.playbackRate = rate;
-        },
+			const v = this._getVideo();
+			if (!v || Math.abs(v.playbackRate - rate) < 0.01) return; 
+			this.expectedRate = v.playbackRate = toNum(rate, 1, 0.0625, 16); // Clamped to Chromium's limit. Smart Speed could also do nothing, if a user momentarily sets a certain speed and one too hard to listen to.
+								},
 
-        _setState(next) {
+									_setState(next) {
             this.state = next;
             UI.onStateChanged(this, next);
         },

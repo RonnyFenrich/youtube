@@ -187,8 +187,8 @@ document.addEventListener('it-message-from-extension', function () {
 				ImprovedTube.playlistReversed = ImprovedTube.storage.playlist_reversed_active;
 			}
 
-			if (ImprovedTube.storage.block_vp9 || ImprovedTube.storage.block_av1 || ImprovedTube.storage.block_h264) {
-				let atlas = { block_vp9: 'vp9|vp09', block_h264: 'avc1', block_av1: 'av01' },
+			if (ImprovedTube.storage.block_vp9 || ImprovedTube.storage.block_av1 || ImprovedTube.storage.block_h264 || ImprovedTube.storage.block_opus) {
+				let atlas = { block_vp9: 'vp9|vp09', block_h264: 'avc1', block_av1: 'av01', block_opus: 'opus' },
 					codec = Object.keys(atlas).reduce(function (all, key) {
 						return ImprovedTube.storage[key] ? ((all ? all + '|' : '') + atlas[key]) : all
 					}, '');
@@ -209,6 +209,9 @@ document.addEventListener('it-message-from-extension', function () {
 			ImprovedTube.init();
 			ImprovedTube.blocklistInit();
 
+			// let other scripts and extensions know the initialization is done
+			document.dispatchEvent(new CustomEvent('init_completed'));
+
 			/*--------------------------------------------------------------
 			# Immediate reaction to any change of our extension storage (settings)
 					While most of our features are chosen permanently (set and forget) and need to run with YouTube,
@@ -221,8 +224,8 @@ document.addEventListener('it-message-from-extension', function () {
 			let camelized_key = message.camelizedKey;
 
 			ImprovedTube.storage[message.key] = message.value;
-			if (['block_vp9', 'block_h264', 'block_av1'].includes(message.key)) {
-				let atlas = { block_vp9: 'vp9|vp09', block_h264: 'avc1', block_av1: 'av01' }
+			if (['block_vp9', 'block_h264', 'block_av1', 'block_opus'].includes(message.key)) {
+				let atlas = { block_vp9: 'vp9|vp09', block_h264: 'avc1', block_av1: 'av01', block_opus: 'opus' }
 				localStorage['it-codec'] = Object.keys(atlas).reduce(function (all, key) {
 					return ImprovedTube.storage[key] ? ((all ? all + '|' : '') + atlas[key]) : all
 				}, '');
@@ -425,10 +428,12 @@ document.addEventListener('it-message-from-extension', function () {
 					break
 
 				case 'playerPlaybackSpeedButton':
-					if (ImprovedTube.storage.player_playback_speed_button === false) {
-						document.querySelector('#it-playback-speed-button')?.remove();
-					} else if (ImprovedTube.storage.player_playback_speed_button === true) {
-						ImprovedTube.playerPlaybackSpeedButton();
+					if (ImprovedTube.storage.player_playback_speed_button !== true) { // Also clean up when the setting is removed.
+						ImprovedTube.playerPlaybackSpeedButtonVideo?.removeEventListener(
+							'ratechange', ImprovedTube.playerPlaybackSpeedButtonUpdate
+						);
+						delete ImprovedTube.playerPlaybackSpeedButtonVideo;
+						ImprovedTube.elements.buttons['it-playback-speed-button']?.remove();
 					}
 					break
 
