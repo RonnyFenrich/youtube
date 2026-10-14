@@ -11,6 +11,7 @@
 # Add "Watch Later" buttons
 # Dim thumbnails
 # Track seen videos
+# Hide "Experiencing interruptions?" toasts
 # Font
 # Mark watched videos
 # Track watched videos
@@ -973,6 +974,46 @@ extension.features.trackSeenVideos.toggleHovered = function () {
 
 	this.set(videoId, added);
 	extension.features.thumbnailButtons.toast(added ? 'Marked as seen' : 'Removed from seen', videoId);
+};
+/*--------------------------------------------------------------
+# HIDE "EXPERIENCING INTERRUPTIONS?" TOASTS
+--------------------------------------------------------------*/
+// The snackbar has no distinguishing markup, so it's matched by its (English) text
+extension.features.hideInterruptionsToast = function () {
+	var feature = extension.features.hideInterruptionsToast,
+		enabled = extension.storage.get('hide_interruptions_toast') === true;
+
+	if (enabled && !feature.observer) {
+		feature.observer = new MutationObserver(function () {
+			if (!feature.scheduled) {
+				feature.scheduled = true;
+				requestAnimationFrame(function () {
+					feature.scheduled = false;
+					feature.check();
+				});
+			}
+		});
+		// characterData too: YouTube may reuse the snackbar and only swap its text
+		feature.observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true,
+			characterData: true
+		});
+	} else if (!enabled && feature.observer) {
+		feature.observer.disconnect();
+		feature.observer = null;
+	}
+
+	feature.check();
+};
+
+// The container is shared by every snackbar, so the mark is cleared once another one shows
+extension.features.hideInterruptionsToast.check = function () {
+	var containers = document.querySelectorAll('snackbar-container');
+
+	for (var i = 0, l = containers.length; i < l; i++) {
+		containers[i].toggleAttribute('it-interruptions-toast', !!this.observer && /Experiencing interruptions/i.test(containers[i].textContent));
+	}
 };
 /*--------------------------------------------------------------
 # FONT

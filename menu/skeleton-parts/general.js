@@ -551,6 +551,11 @@ extension.skeleton.main.layers.section.general = {
 					text: 'confirmationBeforeClosing',
 					tags: 'random prevent close exit'
 				},
+				hide_interruptions_toast: {
+					component: 'switch',
+					text: 'hideInterruptionsToast',
+					tags: 'experiencing interruptions snackbar toast popup notification'
+				},
 				font: {
 					component: 'select',
 					text: 'font',

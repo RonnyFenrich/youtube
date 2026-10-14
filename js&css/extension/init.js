@@ -45,6 +45,7 @@ extension.events.on('init', function () {
 	extension.features.popupWindowButtons();
 	extension.features.watchLaterButton();
 	extension.features.trackSeenVideos();
+	extension.features.hideInterruptionsToast();
 	extension.features.disableThumbnailPlayback();
 	extension.features.muteThumbnailPreviews();
 	extension.features.markWatchedVideos();

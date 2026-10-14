@@ -673,6 +673,13 @@ html[dark] .it-thumb-toast {
 }
 
 /*--------------------------------------------------------------
+# Hide "Experiencing interruptions?" toasts
+--------------------------------------------------------------*/
+snackbar-container[it-interruptions-toast] {
+	display: none !important;
+}
+
+/*--------------------------------------------------------------
 # Dimmed thumbnails (Seen, Watch Later)
 --------------------------------------------------------------*/
 html[it-track-seen-videos='true'] [it-seen] {
