@@ -9,6 +9,7 @@
 # Default content country
 # Add "Popup window" buttons
 # Add "Watch Later" buttons
+# Track "Not interested" videos
 # Font
 # Mark watched videos
 # Track watched videos
@@ -522,61 +523,119 @@ extension.features.addToWatchLater = function (videoId) {
 	});
 };
 
-// One shared button positioned over the hovered thumbnail: the hover preview is an overlay outside the card,
+// Floating buttons positioned over the hovered thumbnail: the hover preview is an overlay outside the card,
 // so a button inside the card loses :hover under it and the preview would get a second one
-extension.features.watchLaterButton = function (event) {
-	var feature = extension.features.watchLaterButton;
+extension.features.thumbnailButtons = function (event) {
+	var feature = extension.features.thumbnailButtons;
 
-	if (event instanceof Event) {
-		if (event.type === 'mouseover') {
-			var target = event.target;
+	if (event.type === 'mouseover') {
+		var target = event.target;
 
-			if (!(target instanceof Element) || (feature.button && feature.button.contains(target))) {
-				return;
-			}
-
-			if (target.closest('ytd-video-preview')) {
-				target = document.elementsFromPoint(event.clientX, event.clientY).find(function (element) {
-					return !element.closest('ytd-video-preview');
-				});
-			}
-
-			var thumbnail = target && target.closest('ytd-thumbnail, yt-thumbnail-view-model, a.thumb-link');
-
-			feature.show(thumbnail && !thumbnail.closest('ytd-player') ? thumbnail : null);
-		} else if (event.type === 'mouseout') {
-			if (!event.relatedTarget) {
-				feature.show(null);
-			}
-		} else if (feature.thumbnail) {
-			feature.show(feature.thumbnail);
+		if (!(target instanceof Element) || target.closest('.it-thumb-button')) {
+			return;
 		}
-	} else {
-		var enabled = extension.storage.get('watch_later_button') === true;
 
-		['mouseover', 'mouseout', 'scroll', 'resize'].forEach(function (type) {
-			window[enabled ? 'addEventListener' : 'removeEventListener'](type, feature, { capture: true, passive: true });
-		});
-
-		if (!enabled) {
-			feature.show(null);
+		if (target.closest('ytd-video-preview')) {
+			target = document.elementsFromPoint(event.clientX, event.clientY).find(function (element) {
+				return !element.closest('ytd-video-preview');
+			});
 		}
+
+		var thumbnail = target && target.closest('ytd-thumbnail, yt-thumbnail-view-model, a.thumb-link');
+
+		feature.thumbnail = thumbnail && !thumbnail.closest('ytd-player') ? thumbnail : null;
+	} else if (event.type === 'mouseout') {
+		if (event.relatedTarget) {
+			return;
+		}
+
+		feature.thumbnail = null;
 	}
+
+	feature.update();
 };
 
-extension.features.watchLaterButton.show = function (thumbnail) {
-	var button = this.button,
-		rect = thumbnail && thumbnail.isConnected && thumbnail.getBoundingClientRect();
+extension.features.thumbnailButtons.features = function () {
+	return [extension.features.watchLaterButton, extension.features.trackNotInterested];
+};
+
+// Enabled buttons stack top-down in the thumbnail's corner
+extension.features.thumbnailButtons.update = function () {
+	var rect = this.thumbnail && this.thumbnail.isConnected && this.thumbnail.getBoundingClientRect(),
+		thumbnail = rect && rect.width ? this.thumbnail : null,
+		top = thumbnail ? rect.top + 8 : 0;
+
+	this.features().forEach(function (feature) {
+		if (thumbnail && feature.enabled) {
+			feature.show(thumbnail, top, rect.left + 8);
+			top += 48;
+		} else {
+			feature.show(null);
+		}
+	});
+};
+
+extension.features.thumbnailButtons.listen = function () {
+	var feature = this,
+		enabled = this.features().some(function (button) { return button.enabled; });
+
+	['mouseover', 'mouseout', 'scroll', 'resize'].forEach(function (type) {
+		window[enabled ? 'addEventListener' : 'removeEventListener'](type, feature, { capture: true, passive: true });
+	});
+
+	this.update();
+};
+
+extension.features.thumbnailButtons.videoId = function (thumbnail) {
+	var link = thumbnail && extension.features.popupWindowButtons.findVideoLink(thumbnail),
+		match = link && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+
+	return match ? match[1] : null;
+};
+
+extension.features.thumbnailButtons.create = function (className, title, d) {
+	var button = document.createElement('button'),
+		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
+		path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+	button.type = 'button';
+	button.className = 'it-thumb-button ' + className;
+	button.title = title;
+	svg.setAttribute('viewBox', '0 0 24 24');
+	path.setAttribute('d', d);
+	svg.appendChild(path);
+	button.appendChild(svg);
+
+	return button;
+};
+
+extension.features.thumbnailButtons.place = function (button, top, left) {
+	if (!button.isConnected) {
+		document.body.appendChild(button);
+	}
+
+	button.style.top = top + 'px';
+	button.style.left = left + 'px';
+	button.classList.add('it-thumb-button-visible');
+};
+
+extension.features.watchLaterButton = function () {
+	extension.features.watchLaterButton.enabled = extension.storage.get('watch_later_button') === true;
+	extension.features.thumbnailButtons.listen();
+};
+
+extension.features.watchLaterButton.show = function (thumbnail, top, left) {
+	var button = this.button;
 
 	if (button && thumbnail !== this.thumbnail) {
 		button.classList.remove('it-thumb-wl-added');
 	}
 
-	this.thumbnail = rect && rect.width ? thumbnail : null;
+	this.thumbnail = thumbnail;
 
-	if (!this.thumbnail) {
+	if (!thumbnail) {
 		if (button) {
-			button.classList.remove('it-thumb-wl-visible');
+			button.classList.remove('it-thumb-button-visible');
 		}
 
 		return;
@@ -586,44 +645,27 @@ extension.features.watchLaterButton.show = function (thumbnail) {
 		button = this.button = this.create();
 	}
 
-	if (!button.isConnected) {
-		document.body.appendChild(button);
-	}
-
-	button.style.top = rect.top + 8 + 'px';
-	button.style.left = rect.left + 8 + 'px';
-	button.classList.add('it-thumb-wl-visible');
+	extension.features.thumbnailButtons.place(button, top, left);
 };
 
 extension.features.watchLaterButton.create = function () {
 	var feature = this,
-		button = document.createElement('button'),
-		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
-		path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-
-	button.type = 'button';
-	button.className = 'it-thumb-wl-button';
-	button.title = 'Watch later';
-	svg.setAttribute('viewBox', '0 0 24 24');
-	path.setAttribute('d', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
-	svg.appendChild(path);
-	button.appendChild(svg);
+		button = extension.features.thumbnailButtons.create('it-thumb-wl-button', 'Watch later', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
 
 	button.addEventListener('click', function (event) {
 		var thumbnail = feature.thumbnail,
-			link = thumbnail && extension.features.popupWindowButtons.findVideoLink(thumbnail),
-			match = link && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+			videoId = extension.features.thumbnailButtons.videoId(thumbnail);
 
 		event.preventDefault();
 		event.stopPropagation();
 
-		if (!match) {
+		if (!videoId) {
 			console.warn('[ImprovedTube] Watch Later button: no video ID found');
 			return;
 		}
 
-		extension.features.addToWatchLater(match[1]).then(function () {
-			extension.messages.send({ action: 'show-snackbar', text: 'Saved to Watch later', videoId: match[1] });
+		extension.features.addToWatchLater(videoId).then(function () {
+			extension.messages.send({ action: 'show-snackbar', text: 'Saved to Watch later', videoId: videoId });
 
 			if (feature.thumbnail === thumbnail) {
 				button.classList.add('it-thumb-wl-added');
@@ -631,6 +673,152 @@ extension.features.watchLaterButton.create = function () {
 			}
 		}).catch(function (error) {
 			console.warn('[ImprovedTube] Watch Later add failed:', error);
+		});
+	});
+
+	return button;
+};
+/*--------------------------------------------------------------
+# TRACK "NOT INTERESTED" VIDEOS
+--------------------------------------------------------------*/
+// Kept only in extension storage, YouTube isn't told
+extension.features.trackNotInterested = function () {
+	var feature = extension.features.trackNotInterested;
+
+	feature.enabled = extension.storage.get('track_not_interested') === true;
+
+	if (feature.observer) {
+		feature.observer.disconnect();
+		feature.observer = null;
+	}
+
+	if (feature.enabled) {
+		// YouTube recycles cards on navigation and only swaps the link's href
+		feature.observer = new MutationObserver(function (mutationList) {
+			for (var i = 0, l = mutationList.length; i < l; i++) {
+				if (mutationList[i].type === 'attributes') {
+					feature.dim(mutationList[i].target);
+				} else {
+					for (var j = 0, m = mutationList[i].addedNodes.length; j < m; j++) {
+						feature.dimAll(mutationList[i].addedNodes[j]);
+					}
+				}
+			}
+		});
+		feature.observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ['href']
+		});
+	}
+
+	feature.dimAll(document);
+	extension.features.thumbnailButtons.listen();
+};
+
+// Storage key of the list, so other tabs pick up changes
+extension.features.notInterestedVideos = function () {
+	var feature = extension.features.trackNotInterested;
+
+	feature.dimAll(document);
+	feature.show(feature.thumbnail, feature.top, feature.left);
+};
+
+extension.features.trackNotInterested.LINKS = 'a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage';
+
+extension.features.trackNotInterested.has = function (videoId) {
+	var list = extension.storage.get('not_interested_videos');
+
+	return !!(videoId && list && list[videoId]);
+};
+
+extension.features.trackNotInterested.dim = function (link) {
+	if (!(link instanceof Element) || !link.matches(this.LINKS)) {
+		return;
+	}
+
+	var card = link.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model'),
+		match = link.href && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+
+	if (card) {
+		card.toggleAttribute('it-not-interested', this.enabled && this.has(match && match[1]));
+	}
+};
+
+extension.features.trackNotInterested.dimAll = function (root) {
+	if (!root || !root.querySelectorAll) {
+		return;
+	}
+
+	this.dim(root);
+
+	var links = root.querySelectorAll(this.LINKS);
+
+	for (var i = 0, l = links.length; i < l; i++) {
+		this.dim(links[i]);
+	}
+};
+
+extension.features.trackNotInterested.toggle = function (videoId) {
+	var list = Object.assign({}, extension.storage.get('not_interested_videos')),
+		added = !list[videoId];
+
+	if (added) {
+		list[videoId] = { when: Date.now() };
+	} else {
+		delete list[videoId];
+	}
+
+	extension.storage.data.not_interested_videos = list;
+	chrome.storage.local.set({ not_interested_videos: list });
+	extension.features.notInterestedVideos();
+
+	return added;
+};
+
+extension.features.trackNotInterested.show = function (thumbnail, top, left) {
+	var button = this.button;
+
+	this.thumbnail = thumbnail;
+	this.top = top;
+	this.left = left;
+
+	if (!thumbnail) {
+		if (button) {
+			button.classList.remove('it-thumb-button-visible');
+		}
+
+		return;
+	}
+
+	if (!button) {
+		button = this.button = this.create();
+	}
+
+	button.classList.toggle('it-thumb-ni-active', this.has(extension.features.thumbnailButtons.videoId(thumbnail)));
+	extension.features.thumbnailButtons.place(button, top, left);
+};
+
+extension.features.trackNotInterested.create = function () {
+	var feature = this,
+		button = extension.features.thumbnailButtons.create('it-thumb-ni-button', 'Not interested', 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM3 12c0-4.97 4.03-9 9-9 2.2 0 4.21.79 5.77 2.1L5.1 17.77A8.96 8.96 0 0 1 3 12zm9 9c-2.2 0-4.21-.79-5.77-2.1L18.9 6.23A8.96 8.96 0 0 1 21 12c0 4.97-4.03 9-9 9z');
+
+	button.addEventListener('click', function (event) {
+		var videoId = extension.features.thumbnailButtons.videoId(feature.thumbnail);
+
+		event.preventDefault();
+		event.stopPropagation();
+
+		if (!videoId) {
+			console.warn('[ImprovedTube] Not interested button: no video ID found');
+			return;
+		}
+
+		extension.messages.send({
+			action: 'show-snackbar',
+			text: feature.toggle(videoId) ? 'Marked as not interested' : 'Removed from not interested',
+			videoId: videoId
 		});
 	});
 

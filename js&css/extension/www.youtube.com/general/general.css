@@ -581,9 +581,9 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	}
 
 /*--------------------------------------------------------------
-# Thumbnail Watch Later Button
+# Thumbnail Buttons (Watch Later, Not interested)
 --------------------------------------------------------------*/
-.it-thumb-wl-button {
+.it-thumb-button {
 	font-family: inherit;
 
 	/* Above the hover preview, below the masthead (2020) */
@@ -605,15 +605,15 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	background: rgba(0, 0, 0, .6);
 }
 
-.it-thumb-wl-button.it-thumb-wl-visible {
+.it-thumb-button.it-thumb-button-visible {
 	display: flex;
 }
 
-.it-thumb-wl-button:hover {
+.it-thumb-button:hover {
 	background: rgba(0, 0, 0, .8);
 }
 
-.it-thumb-wl-button svg {
+.it-thumb-button svg {
 	width: 30px;
 	height: 30px;
 
@@ -625,6 +625,18 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 .it-thumb-wl-button.it-thumb-wl-added {
 	color: #2ecc71;
 	background: rgba(0, 0, 0, .8);
+}
+
+.it-thumb-ni-button.it-thumb-ni-active {
+	color: #ff4e45;
+	background: rgba(0, 0, 0, .8);
+}
+
+/*--------------------------------------------------------------
+# Not interested videos
+--------------------------------------------------------------*/
+html[it-track-not-interested='true'] [it-not-interested] {
+	opacity: .2;
 }
 
 /*--------------------------------------------------------------

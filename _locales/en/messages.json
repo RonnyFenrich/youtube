@@ -1641,6 +1641,9 @@
   "watchLaterButton": {
     "message": "🕒 Add a 'Watch Later' button to each thumbnail"
   },
+  "trackNotInterested": {
+    "message": "🚫 Track 'Not interested' videos (button on thumbnails, dims marked videos)"
+  },
   "watchTime": {
     "message": "Watch time"
   },

@@ -44,6 +44,7 @@ extension.events.on('init', function () {
 	extension.features.defaultContentCountry();
 	extension.features.popupWindowButtons();
 	extension.features.watchLaterButton();
+	extension.features.trackNotInterested();
 	extension.features.disableThumbnailPlayback();
 	extension.features.muteThumbnailPreviews();
 	extension.features.markWatchedVideos();

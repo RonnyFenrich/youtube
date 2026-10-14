@@ -264,6 +264,11 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'watchLaterButton',
 				},
+				track_not_interested: {
+					component: 'switch',
+					text: 'trackNotInterested',
+					tags: 'not interested dim thumbnail'
+				},
 				watch_later_buttons: {
 					component: 'select',
 					text: 'watchLaterButtons',
