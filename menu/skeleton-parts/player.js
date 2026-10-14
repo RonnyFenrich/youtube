@@ -1748,6 +1748,10 @@ extension.skeleton.main.layers.section.player.on.click = {
 								}
 							}
 						},
+						block_opus: {
+							component: 'switch',
+							text: 'blockOpus'
+						},
 						sanitize: function () {
 							if (satus.storage.get('player_h264')) {
 								if ((!satus.storage.get('block_vp9') || !satus.storage.get('block_av1') && satus.storage.get('block_h264')) ||
@@ -1918,13 +1922,6 @@ extension.skeleton.main.layers.section.player.on.click = {
 			text: 'screenshot',
 			id: 'player_screenshot_button'
 		},
-		player_video_filters_button: {
-			component: 'switch',
-			text: 'videoFiltersButton',
-			id: 'player_video_filters_button',
-			storage: 'player_video_filters_button',
-			value: true
-		},
 		embed_subtitle: {
 			component: 'switch',
 			text: 'Subtitle_Capture_including_the_current_words',
@@ -1947,6 +1944,13 @@ extension.skeleton.main.layers.section.player.on.click = {
 				return options;
 			}
 		},
+		player_video_filters_button: {
+			component: 'switch',
+			text: 'videoFiltersButton',
+			id: 'player_video_filters_button',
+			storage: 'player_video_filters_button',
+			value: true
+		},
 
 		player_playback_speed_button: {
 			component: 'switch',
@@ -1954,22 +1958,25 @@ extension.skeleton.main.layers.section.player.on.click = {
 			storage: 'player_playback_speed_button',
 			id: 'player_playback_speed_button'
 		},
-		
-		player_playback_speed_button_b: {
-			component: 'switch',
-			text: 'playbackSpeedButton',
-			storage: 'player_playback_speed_button_b',
-			id: 'player_playback_speed_button_b',
-		},
-		player_playback_speed_button_b_slider: {
+		player_playback_speed_slider: {
 			id: 'player_custom_playback_speed',
 			storage: 'player_custom_playback_speed',
 			component: 'slider',
 			text: 'preferredSpeed',
-			min: 0.25,
-			max: 4,
+			min: 0.1,
+			max: 16,
 			step: 0.05,
 			value: 1.25
+		},
+		player_playback_speed_step: {
+			storage: 'player_playback_speed_step',
+			component: 'slider',
+			text: 'playbackSpeedStep',
+			textarea: true,
+			min: 0.01,
+			max: 1,
+			step: 0.01,
+			value: 0.25
 		},
 		
 		player_cinema_mode_button: {

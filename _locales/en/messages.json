@@ -216,6 +216,9 @@
   "blockMusic": {
     "message": "Skip Ads while I play music"
   },
+  "blockOpus": {
+    "message": "Block Opus"
+  },
   "blockVp8": {
     "message": "Block VP8"
   },
@@ -1101,6 +1104,9 @@
   "preferredSpeed": {
     "message": "Preferred speed"
   },
+  "playbackSpeedStep": {
+    "message": "Playback speed step"
+  },
   "playbackSpeedHotkey": {
     "message": "Playback speed hotkeys"
   },
@@ -1697,9 +1703,6 @@
   },
   "cool": {
     "message": "Cool"
-  },
-  "brightness": {
-    "message": "Brightness"
   },
   "contrast": {
     "message": "Contrast"
