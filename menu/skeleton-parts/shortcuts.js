@@ -426,6 +426,28 @@ extension.skeleton.main.layers.section.shortcuts = {
 						}
 					}
 				},
+				shortcut_add_to_watch_later: {
+					component: 'shortcut',
+					text: 'addHoveredToWatchLater',
+					value: {
+						keys: {
+							87: {
+								key: 'w'
+							}
+						}
+					}
+				},
+				shortcut_mark_seen: {
+					component: 'shortcut',
+					text: 'markSeen',
+					value: {
+						keys: {
+							83: {
+								key: 's'
+							}
+						}
+					}
+				},
 				shortcut_dark_theme: {
 					component: 'shortcut',
 					text: 'darkTheme'

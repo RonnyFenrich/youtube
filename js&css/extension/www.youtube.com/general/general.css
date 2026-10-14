@@ -581,7 +581,7 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	}
 
 /*--------------------------------------------------------------
-# Thumbnail Buttons (Watch Later, Not interested)
+# Thumbnail Buttons (Watch Later, Seen)
 --------------------------------------------------------------*/
 .it-thumb-button {
 	font-family: inherit;
@@ -622,21 +622,65 @@ html[it-hide-watched-videos='true'] #dismissible:has(.it-mark-watched-videos[wat
 	fill: currentColor;
 }
 
-.it-thumb-wl-button.it-thumb-wl-added {
+.it-thumb-wl-button.it-thumb-wl-active {
 	color: #2ecc71;
 	background: rgba(0, 0, 0, .8);
 }
 
-.it-thumb-ni-button.it-thumb-ni-active {
+.it-thumb-seen-button.it-thumb-seen-active {
 	color: #ff4e45;
 	background: rgba(0, 0, 0, .8);
 }
 
+.it-thumb-toast {
+	font-family: Roboto, Arial, sans-serif;
+	font-size: 14px;
+
+	position: fixed;
+	z-index: 2100;
+	bottom: 24px;
+	left: 24px;
+
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 16px 8px 8px;
+
+	color: #fff;
+	border-radius: 8px;
+	background: #0f0f0f;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+
+	transition: opacity .2s;
+}
+
+html[dark] .it-thumb-toast {
+	color: #0f0f0f;
+	background: #f1f1f1;
+}
+
+.it-thumb-toast.it-thumb-toast-hiding {
+	opacity: 0;
+}
+
+.it-thumb-toast img {
+	width: 48px;
+	height: 36px;
+
+	border-radius: 4px;
+
+	object-fit: cover;
+}
+
 /*--------------------------------------------------------------
-# Not interested videos
+# Dimmed thumbnails (Seen, Watch Later)
 --------------------------------------------------------------*/
-html[it-track-not-interested='true'] [it-not-interested] {
-	opacity: .2;
+html[it-track-seen-videos='true'] [it-seen] {
+	opacity: .3;
+}
+
+html[it-watch-later-button='true'] [it-in-watch-later] {
+	opacity: .7;
 }
 
 /*--------------------------------------------------------------

@@ -243,6 +243,11 @@ document.addEventListener('it-message-from-extension', function () {
 					ImprovedTube.blocklistInit();
 					break
 
+				case 'watchLaterButton':
+				case 'trackSeenVideos':
+					ImprovedTube.shortcutsInit();
+					break
+
 				case 'videoFiltersActivate':
 				case 'videoFiltersPreset':
 				case 'videoFilterBrightness':
@@ -646,20 +651,6 @@ document.addEventListener('it-message-from-extension', function () {
 			if (iframe) {
 				iframe.src = message.responseOptionsUrl;
 			}
-		} else if (message.action === 'show-snackbar') {
-			// YouTube's native bottom-left toast, same command its Save dialog uses
-			document.querySelector('ytd-app')?.resolveCommand?.({
-				showSnackbarCommand: {
-					content: {
-						snackbarViewModel: {
-							image: message.videoId ? { sources: [{ url: 'https://i.ytimg.com/vi/' + message.videoId + '/default.jpg', width: 120, height: 90 }] } : undefined,
-							text: { content: message.text }
-						}
-					},
-					animationStyle: 'SNACKBAR_ANIMATION_STYLE_DEFAULT',
-					durationSeconds: 3
-				}
-			});
 		} /* else if (message.hasOwnProperty('mixer')) {
 			if (ImprovedTube.elements.player) {
 				  document.documentElement.setAttribute('it-response', JSON.stringify({

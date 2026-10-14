@@ -264,10 +264,10 @@ extension.skeleton.main.layers.section.general = {
 					component: 'switch',
 					text: 'watchLaterButton',
 				},
-				track_not_interested: {
+				track_seen_videos: {
 					component: 'switch',
-					text: 'trackNotInterested',
-					tags: 'not interested dim thumbnail'
+					text: 'trackSeenVideos',
+					tags: 'seen watched dim thumbnail'
 				},
 				watch_later_buttons: {
 					component: 'select',

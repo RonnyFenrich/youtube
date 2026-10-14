@@ -9,7 +9,8 @@
 # Default content country
 # Add "Popup window" buttons
 # Add "Watch Later" buttons
-# Track "Not interested" videos
+# Dim thumbnails
+# Track seen videos
 # Font
 # Mark watched videos
 # Track watched videos
@@ -469,8 +470,8 @@ extension.features.watchLaterButtons = function (event) {
 /*--------------------------------------------------------------
 # ADD "WATCH LATER" BUTTONS TO THUMBNAILS
 --------------------------------------------------------------*/
-// Calls the add endpoint directly: YouTube's own buttons toggle, and would remove videos already saved
-extension.features.addToWatchLater = function (videoId) {
+// Signed like YouTube's own requests, so it acts on the signed-in (or brand) account
+extension.features.innertube = function (endpoint, body) {
 	var scripts = Array.prototype.map.call(document.scripts, function (script) { return script.textContent; }).join('\n');
 
 	function config(key) {
@@ -497,29 +498,37 @@ extension.features.addToWatchLater = function (videoId) {
 				'X-YouTube-Client-Name': '1',
 				'X-YouTube-Client-Version': clientVersion
 			},
-			// Brand accounts: without this the video lands in the main account's Watch Later
+			// Brand accounts: without this the request acts on the main account
 			pageId = config('DELEGATED_SESSION_ID');
 
 		if (pageId) {
 			headers['X-Goog-PageId'] = pageId;
 		}
 
-		return fetch('/youtubei/v1/browse/edit_playlist?prettyPrint=false', {
+		body.context = { client: { clientName: 'WEB', clientVersion: clientVersion, hl: config('HL') || 'en' } };
+
+		return fetch('/youtubei/v1/' + endpoint + '?prettyPrint=false', {
 			method: 'POST',
 			credentials: 'same-origin',
 			headers: headers,
-			body: JSON.stringify({
-				context: { client: { clientName: 'WEB', clientVersion: clientVersion, hl: config('HL') || 'en' } },
-				playlistId: 'WL',
-				actions: [{ action: 'ACTION_ADD_VIDEO', addedVideoId: videoId }]
-			})
+			body: JSON.stringify(body)
 		});
 	}).then(function (response) {
 		return response.ok ? response.json() : Promise.reject('HTTP ' + response.status);
+	});
+};
+
+// Calls the add endpoint directly: YouTube's own buttons toggle, and would remove videos already saved
+extension.features.addToWatchLater = function (videoId) {
+	return extension.features.innertube('browse/edit_playlist', {
+		playlistId: 'WL',
+		actions: [{ action: 'ACTION_ADD_VIDEO', addedVideoId: videoId }]
 	}).then(function (data) {
 		if (data.status && data.status !== 'STATUS_SUCCEEDED') {
 			return Promise.reject(data.status);
 		}
+
+		extension.features.watchLaterButton.added(videoId);
 	});
 };
 
@@ -556,7 +565,7 @@ extension.features.thumbnailButtons = function (event) {
 };
 
 extension.features.thumbnailButtons.features = function () {
-	return [extension.features.watchLaterButton, extension.features.trackNotInterested];
+	return [extension.features.watchLaterButton, extension.features.trackSeenVideos];
 };
 
 // Enabled buttons stack top-down in the thumbnail's corner
@@ -619,165 +628,53 @@ extension.features.thumbnailButtons.place = function (button, top, left) {
 	button.classList.add('it-thumb-button-visible');
 };
 
+// Own toast instead of YouTube's snackbar, which queues and can't be dismissed early
+extension.features.thumbnailButtons.toast = function (text, videoId) {
+	var feature = extension.features.thumbnailButtons,
+		toast = document.createElement('div'),
+		label = document.createElement('span');
+
+	if (feature.toastElement) {
+		feature.toastElement.remove();
+	}
+
+	clearTimeout(feature.toastTimeout);
+
+	toast.className = 'it-thumb-toast';
+
+	if (videoId) {
+		var image = document.createElement('img');
+
+		image.src = 'https://i.ytimg.com/vi/' + videoId + '/default.jpg';
+		toast.appendChild(image);
+	}
+
+	label.textContent = text;
+	toast.appendChild(label);
+	document.body.appendChild(toast);
+	feature.toastElement = toast;
+
+	feature.toastTimeout = setTimeout(function () {
+		toast.classList.add('it-thumb-toast-hiding');
+		setTimeout(function () {
+			toast.remove();
+		}, 200);
+	}, 1000);
+};
+
+// Also dims videos already in Watch Later
 extension.features.watchLaterButton = function () {
-	extension.features.watchLaterButton.enabled = extension.storage.get('watch_later_button') === true;
+	var feature = extension.features.watchLaterButton;
+
+	feature.enabled = extension.storage.get('watch_later_button') === true;
+
+	window[feature.enabled ? 'addEventListener' : 'removeEventListener']('yt-navigate-finish', feature.onNavigate);
+	feature.refresh();
+	extension.features.dimThumbnails();
 	extension.features.thumbnailButtons.listen();
 };
 
 extension.features.watchLaterButton.show = function (thumbnail, top, left) {
-	var button = this.button;
-
-	if (button && thumbnail !== this.thumbnail) {
-		button.classList.remove('it-thumb-wl-added');
-	}
-
-	this.thumbnail = thumbnail;
-
-	if (!thumbnail) {
-		if (button) {
-			button.classList.remove('it-thumb-button-visible');
-		}
-
-		return;
-	}
-
-	if (!button) {
-		button = this.button = this.create();
-	}
-
-	extension.features.thumbnailButtons.place(button, top, left);
-};
-
-extension.features.watchLaterButton.create = function () {
-	var feature = this,
-		button = extension.features.thumbnailButtons.create('it-thumb-wl-button', 'Watch later', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
-
-	button.addEventListener('click', function (event) {
-		var thumbnail = feature.thumbnail,
-			videoId = extension.features.thumbnailButtons.videoId(thumbnail);
-
-		event.preventDefault();
-		event.stopPropagation();
-
-		if (!videoId) {
-			console.warn('[ImprovedTube] Watch Later button: no video ID found');
-			return;
-		}
-
-		extension.features.addToWatchLater(videoId).then(function () {
-			extension.messages.send({ action: 'show-snackbar', text: 'Saved to Watch later', videoId: videoId });
-
-			if (feature.thumbnail === thumbnail) {
-				button.classList.add('it-thumb-wl-added');
-				setTimeout(function () { button.classList.remove('it-thumb-wl-added'); }, 2000);
-			}
-		}).catch(function (error) {
-			console.warn('[ImprovedTube] Watch Later add failed:', error);
-		});
-	});
-
-	return button;
-};
-/*--------------------------------------------------------------
-# TRACK "NOT INTERESTED" VIDEOS
---------------------------------------------------------------*/
-// Kept only in extension storage, YouTube isn't told
-extension.features.trackNotInterested = function () {
-	var feature = extension.features.trackNotInterested;
-
-	feature.enabled = extension.storage.get('track_not_interested') === true;
-
-	if (feature.observer) {
-		feature.observer.disconnect();
-		feature.observer = null;
-	}
-
-	if (feature.enabled) {
-		// YouTube recycles cards on navigation and only swaps the link's href
-		feature.observer = new MutationObserver(function (mutationList) {
-			for (var i = 0, l = mutationList.length; i < l; i++) {
-				if (mutationList[i].type === 'attributes') {
-					feature.dim(mutationList[i].target);
-				} else {
-					for (var j = 0, m = mutationList[i].addedNodes.length; j < m; j++) {
-						feature.dimAll(mutationList[i].addedNodes[j]);
-					}
-				}
-			}
-		});
-		feature.observer.observe(document.documentElement, {
-			childList: true,
-			subtree: true,
-			attributes: true,
-			attributeFilter: ['href']
-		});
-	}
-
-	feature.dimAll(document);
-	extension.features.thumbnailButtons.listen();
-};
-
-// Storage key of the list, so other tabs pick up changes
-extension.features.notInterestedVideos = function () {
-	var feature = extension.features.trackNotInterested;
-
-	feature.dimAll(document);
-	feature.show(feature.thumbnail, feature.top, feature.left);
-};
-
-extension.features.trackNotInterested.LINKS = 'a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage';
-
-extension.features.trackNotInterested.has = function (videoId) {
-	var list = extension.storage.get('not_interested_videos');
-
-	return !!(videoId && list && list[videoId]);
-};
-
-extension.features.trackNotInterested.dim = function (link) {
-	if (!(link instanceof Element) || !link.matches(this.LINKS)) {
-		return;
-	}
-
-	var card = link.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model'),
-		match = link.href && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
-
-	if (card) {
-		card.toggleAttribute('it-not-interested', this.enabled && this.has(match && match[1]));
-	}
-};
-
-extension.features.trackNotInterested.dimAll = function (root) {
-	if (!root || !root.querySelectorAll) {
-		return;
-	}
-
-	this.dim(root);
-
-	var links = root.querySelectorAll(this.LINKS);
-
-	for (var i = 0, l = links.length; i < l; i++) {
-		this.dim(links[i]);
-	}
-};
-
-extension.features.trackNotInterested.toggle = function (videoId) {
-	var list = Object.assign({}, extension.storage.get('not_interested_videos')),
-		added = !list[videoId];
-
-	if (added) {
-		list[videoId] = { when: Date.now() };
-	} else {
-		delete list[videoId];
-	}
-
-	extension.storage.data.not_interested_videos = list;
-	chrome.storage.local.set({ not_interested_videos: list });
-	extension.features.notInterestedVideos();
-
-	return added;
-};
-
-extension.features.trackNotInterested.show = function (thumbnail, top, left) {
 	var button = this.button;
 
 	this.thumbnail = thumbnail;
@@ -796,33 +693,262 @@ extension.features.trackNotInterested.show = function (thumbnail, top, left) {
 		button = this.button = this.create();
 	}
 
-	button.classList.toggle('it-thumb-ni-active', this.has(extension.features.thumbnailButtons.videoId(thumbnail)));
+	button.classList.toggle('it-thumb-wl-active', this.videos.has(extension.features.thumbnailButtons.videoId(thumbnail)));
 	extension.features.thumbnailButtons.place(button, top, left);
 };
 
-extension.features.trackNotInterested.create = function () {
+extension.features.watchLaterButton.create = function () {
 	var feature = this,
-		button = extension.features.thumbnailButtons.create('it-thumb-ni-button', 'Not interested', 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM3 12c0-4.97 4.03-9 9-9 2.2 0 4.21.79 5.77 2.1L5.1 17.77A8.96 8.96 0 0 1 3 12zm9 9c-2.2 0-4.21-.79-5.77-2.1L18.9 6.23A8.96 8.96 0 0 1 21 12c0 4.97-4.03 9-9 9z');
+		button = extension.features.thumbnailButtons.create('it-thumb-wl-button', 'Watch later', 'M14.97 16.95 10 13.87V7h2v5.76l4.03 2.49-1.06 1.7zM12 3c-4.96 0-9 4.04-9 9s4.04 9 9 9 9-4.04 9-9-4.04-9-9-9m0-1c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2z');
 
 	button.addEventListener('click', function (event) {
-		var videoId = extension.features.thumbnailButtons.videoId(feature.thumbnail);
-
 		event.preventDefault();
 		event.stopPropagation();
-
-		if (!videoId) {
-			console.warn('[ImprovedTube] Not interested button: no video ID found');
-			return;
-		}
-
-		extension.messages.send({
-			action: 'show-snackbar',
-			text: feature.toggle(videoId) ? 'Marked as not interested' : 'Removed from not interested',
-			videoId: videoId
-		});
+		feature.addHovered();
 	});
 
 	return button;
+};
+
+// Shared by the button and the W shortcut
+extension.features.watchLaterButton.addHovered = function () {
+	var videoId = this.enabled === true && extension.features.thumbnailButtons.videoId(this.thumbnail);
+
+	if (!videoId) {
+		return;
+	}
+
+	extension.features.addToWatchLater(videoId).then(function () {
+		extension.features.thumbnailButtons.toast('Saved to Watch later', videoId);
+	}).catch(function (error) {
+		console.warn('[ImprovedTube] Watch Later add failed:', error);
+	});
+};
+
+extension.features.watchLaterButton.videos = new Set();
+
+extension.features.watchLaterButton.onNavigate = function () {
+	extension.features.watchLaterButton.refresh();
+};
+
+// Held in memory only: card data doesn't say whether a video is in Watch Later (its toggle is never set)
+extension.features.watchLaterButton.refresh = function () {
+	var feature = this,
+		ids = new Set(),
+		pages = 0;
+
+	if (!this.enabled || this.fetching || Date.now() - (this.fetchedAt || 0) < 60000) {
+		return;
+	}
+
+	this.fetching = true;
+	this.fetchedAt = Date.now();
+
+	function page(body) {
+		return extension.features.innertube('browse', body).then(function (data) {
+			var token = null;
+
+			(function walk(node) {
+				if (!node || typeof node !== 'object') {
+					return;
+				}
+
+				if (node.playlistVideoRenderer && node.playlistVideoRenderer.videoId) {
+					ids.add(node.playlistVideoRenderer.videoId);
+				} else if (node.continuationCommand && node.continuationCommand.token) {
+					token = token || node.continuationCommand.token;
+				}
+
+				for (var key in node) {
+					walk(node[key]);
+				}
+			})(data);
+
+			// 100 videos per page, Watch Later holds at most 5000
+			return token && ++pages < 50 ? page({ continuation: token }) : null;
+		});
+	}
+
+	page({ browseId: 'VLWL' }).then(function () {
+		feature.videos = ids;
+		feature.show(feature.thumbnail, feature.top, feature.left);
+		extension.features.dimThumbnails.all(document);
+	}).catch(function (error) {
+		console.warn('[ImprovedTube] Watch Later list fetch failed:', error);
+	}).finally(function () {
+		feature.fetching = false;
+	});
+};
+
+// Also marked seen, so it stays dimmed once removed from Watch Later
+extension.features.watchLaterButton.added = function (videoId) {
+	this.videos.add(videoId);
+
+	if (extension.features.trackSeenVideos.enabled === true) {
+		extension.features.trackSeenVideos.set(videoId, true);
+	}
+
+	this.show(this.thumbnail, this.top, this.left);
+	extension.features.dimThumbnails.all(document);
+};
+
+/*--------------------------------------------------------------
+# DIM THUMBNAILS (Watch Later, Seen)
+--------------------------------------------------------------*/
+extension.features.dimThumbnails = function () {
+	var feature = extension.features.dimThumbnails,
+		enabled = extension.features.watchLaterButton.enabled || extension.features.trackSeenVideos.enabled;
+
+	if (enabled && !feature.observer) {
+		// YouTube recycles cards on navigation and only swaps the link's href
+		feature.observer = new MutationObserver(function (mutationList) {
+			for (var i = 0, l = mutationList.length; i < l; i++) {
+				if (mutationList[i].type === 'attributes') {
+					feature.dim(mutationList[i].target);
+				} else {
+					for (var j = 0, m = mutationList[i].addedNodes.length; j < m; j++) {
+						feature.all(mutationList[i].addedNodes[j]);
+					}
+				}
+			}
+		});
+		feature.observer.observe(document.documentElement, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ['href']
+		});
+	} else if (!enabled && feature.observer) {
+		feature.observer.disconnect();
+		feature.observer = null;
+	}
+
+	feature.all(document);
+};
+
+extension.features.dimThumbnails.LINKS = 'a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage';
+
+extension.features.dimThumbnails.dim = function (link) {
+	if (!(link instanceof Element) || !link.matches(this.LINKS)) {
+		return;
+	}
+
+	var card = link.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model'),
+		match = link.href && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+
+	if (card) {
+		var videoId = match && match[1],
+			watchLater = extension.features.watchLaterButton.enabled === true && extension.features.watchLaterButton.videos.has(videoId),
+			seen = !watchLater && extension.features.trackSeenVideos.enabled === true && extension.features.trackSeenVideos.has(videoId);
+
+		card.toggleAttribute('it-in-watch-later', watchLater);
+		card.toggleAttribute('it-seen', seen);
+	}
+};
+
+extension.features.dimThumbnails.all = function (root) {
+	if (!root || !root.querySelectorAll) {
+		return;
+	}
+
+	this.dim(root);
+
+	var links = root.querySelectorAll(this.LINKS);
+
+	for (var i = 0, l = links.length; i < l; i++) {
+		this.dim(links[i]);
+	}
+};
+/*--------------------------------------------------------------
+# TRACK SEEN VIDEOS
+--------------------------------------------------------------*/
+// Kept only in extension storage, YouTube isn't told
+extension.features.trackSeenVideos = function () {
+	extension.features.trackSeenVideos.enabled = extension.storage.get('track_seen_videos') === true;
+	extension.features.dimThumbnails();
+	extension.features.thumbnailButtons.listen();
+};
+
+// Storage key of the list, so other tabs pick up changes
+extension.features.seenVideos = function () {
+	var feature = extension.features.trackSeenVideos;
+
+	extension.features.dimThumbnails.all(document);
+	feature.show(feature.thumbnail, feature.top, feature.left);
+};
+
+extension.features.trackSeenVideos.has = function (videoId) {
+	var list = extension.storage.get('seen_videos');
+
+	return !!(videoId && list && list[videoId]);
+};
+
+extension.features.trackSeenVideos.set = function (videoId, value) {
+	var list = Object.assign({}, extension.storage.get('seen_videos'));
+
+	if (!list[videoId] === !value) {
+		return;
+	}
+
+	if (value) {
+		list[videoId] = { when: Date.now() };
+	} else {
+		delete list[videoId];
+	}
+
+	extension.storage.data.seen_videos = list;
+	chrome.storage.local.set({ seen_videos: list });
+	extension.features.seenVideos();
+};
+
+extension.features.trackSeenVideos.show = function (thumbnail, top, left) {
+	var button = this.button;
+
+	this.thumbnail = thumbnail;
+	this.top = top;
+	this.left = left;
+
+	if (!thumbnail) {
+		if (button) {
+			button.classList.remove('it-thumb-button-visible');
+		}
+
+		return;
+	}
+
+	if (!button) {
+		button = this.button = this.create();
+	}
+
+	button.classList.toggle('it-thumb-seen-active', this.has(extension.features.thumbnailButtons.videoId(thumbnail)));
+	extension.features.thumbnailButtons.place(button, top, left);
+};
+
+extension.features.trackSeenVideos.create = function () {
+	var feature = this,
+		button = extension.features.thumbnailButtons.create('it-thumb-seen-button', 'Seen', 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z');
+
+	button.addEventListener('click', function (event) {
+		event.preventDefault();
+		event.stopPropagation();
+		feature.toggleHovered();
+	});
+
+	return button;
+};
+
+// Shared by the button and the S shortcut
+extension.features.trackSeenVideos.toggleHovered = function () {
+	var videoId = this.enabled === true && extension.features.thumbnailButtons.videoId(this.thumbnail);
+
+	if (!videoId) {
+		return;
+	}
+
+	var added = !this.has(videoId);
+
+	this.set(videoId, added);
+	extension.features.thumbnailButtons.toast(added ? 'Marked as seen' : 'Removed from seen', videoId);
 };
 /*--------------------------------------------------------------
 # FONT

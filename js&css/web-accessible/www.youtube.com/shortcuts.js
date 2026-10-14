@@ -17,6 +17,9 @@ ImprovedTube.shortcutsInit = function () {
 	const defaults = {
 		shortcut_remove_from_playlist: {keys: {82: {key: 'r'}}}
 	};
+	// Only while their feature is on, so W and S still pan 360° videos otherwise
+	if (this.storage.watch_later_button === true) defaults.shortcut_add_to_watch_later = {keys: {87: {key: 'w'}}};
+	if (this.storage.track_seen_videos === true) defaults.shortcut_mark_seen = {keys: {83: {key: 's'}}};
 	// extract shortcuts from User Settings and initialize 'listening'
 	for (const [name, keys] of Object.entries({...defaults, ...this.storage}).filter(v => v[0].startsWith('shortcut_'))) {
 		if (!keys) continue;
@@ -552,6 +555,17 @@ REMOVE FROM PLAYLIST
 ------------------------------------------------------------------------------*/
 ImprovedTube.shortcutRemoveFromPlaylist = function () {
 	this.removeFromPlaylist();
+};
+/*------------------------------------------------------------------------------
+HOVERED THUMBNAIL: ADD TO WATCH LATER, MARK SEEN
+------------------------------------------------------------------------------*/
+// These features live in the content script, which knows the hovered thumbnail
+ImprovedTube.shortcutAddToWatchLater = function () {
+	this.messages.send({action: 'add-watch-later'});
+};
+
+ImprovedTube.shortcutMarkSeen = function () {
+	this.messages.send({action: 'toggle-seen'});
 };
 /*------------------------------------------------------------------------------
 4.7.25 DARK THEME

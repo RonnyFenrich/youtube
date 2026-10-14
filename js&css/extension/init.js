@@ -44,7 +44,7 @@ extension.events.on('init', function () {
 	extension.features.defaultContentCountry();
 	extension.features.popupWindowButtons();
 	extension.features.watchLaterButton();
-	extension.features.trackNotInterested();
+	extension.features.trackSeenVideos();
 	extension.features.disableThumbnailPlayback();
 	extension.features.muteThumbnailPreviews();
 	extension.features.markWatchedVideos();
@@ -274,6 +274,10 @@ document.addEventListener('it-message-from-youtube', function () {
 			chrome.storage.local.set({
 				watched: extension.storage.data.watched
 			});
+		} else if (message.action === 'add-watch-later') {
+			extension.features.watchLaterButton.addHovered();
+		} else if (message.action === 'toggle-seen') {
+			extension.features.trackSeenVideos.toggleHovered();
 		} else if (message.action === 'set') {
 			if (message.value) {
 				chrome.storage.local.set({ [message.key]: message.value });
