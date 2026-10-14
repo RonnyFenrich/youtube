@@ -54,6 +54,16 @@ describe('Track seen videos', () => {
 		expect(generalJs).toContain('seen = !watchLater && ');
 	});
 
+	test('marks videos seen when they leave Watch Later', () => {
+		const appearanceJs = fs.readFileSync(path.join(__dirname, '../../js&css/web-accessible/www.youtube.com/appearance.js'), 'utf8');
+		const initJs = fs.readFileSync(path.join(__dirname, '../../js&css/extension/init.js'), 'utf8');
+
+		expect(appearanceJs).toContain("ImprovedTube.messages.send({action: 'removed-from-watch-later', videoId: params.get('v')});");
+		expect(initJs).toContain('extension.features.watchLaterButton.removed(message.videoId);');
+		expect(generalJs).toContain('this.videos.delete(videoId);');
+		expect(generalJs).toContain('if (!ids.has(videoId)) {');
+	});
+
 	test('S shortcut toggles the hovered thumbnail, only while the feature is on', () => {
 		const shortcutsJs = fs.readFileSync(path.join(__dirname, '../../js&css/web-accessible/www.youtube.com/shortcuts.js'), 'utf8');
 		const pageCoreJs = fs.readFileSync(path.join(__dirname, '../../js&css/web-accessible/core.js'), 'utf8');

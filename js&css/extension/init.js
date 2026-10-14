@@ -276,6 +276,8 @@ document.addEventListener('it-message-from-youtube', function () {
 			});
 		} else if (message.action === 'add-watch-later') {
 			extension.features.watchLaterButton.addHovered();
+		} else if (message.action === 'removed-from-watch-later') {
+			extension.features.watchLaterButton.removed(message.videoId);
 		} else if (message.action === 'toggle-seen') {
 			extension.features.trackSeenVideos.toggleHovered();
 		} else if (message.action === 'set') {

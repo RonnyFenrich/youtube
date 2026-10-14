@@ -697,7 +697,8 @@ ImprovedTube.improvedtubeYoutubeButtonsUnderPlayer = function () {
  REMOVE FROM PLAYLIST BUTTON
 ------------------------------------------------------------------------------*/
 ImprovedTube.removeFromPlaylist = function () {
-	var activePlaylistItemButton = document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer button') || document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer yt-icon-button');
+	var activePlaylistItemButton = document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer button') || document.querySelector('ytd-playlist-panel-video-renderer[selected] ytd-menu-renderer yt-icon-button'),
+		params = new URLSearchParams(location.search);
 	if (activePlaylistItemButton) {
 		activePlaylistItemButton.click();
 		setTimeout(function() {
@@ -705,6 +706,10 @@ ImprovedTube.removeFromPlaylist = function () {
 			for (var i = 0; i < menuItems.length; i++) {
 				if (menuItems[i].textContent.includes('Remove from')) {
 					menuItems[i].click();
+					// The content script marks it seen
+					if (params.get('list') === 'WL') {
+						ImprovedTube.messages.send({action: 'removed-from-watch-later', videoId: params.get('v')});
+					}
 					break;
 				}
 			}

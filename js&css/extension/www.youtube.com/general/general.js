@@ -770,6 +770,16 @@ extension.features.watchLaterButton.refresh = function () {
 	}
 
 	page({ browseId: 'VLWL' }).then(function () {
+		// Removed elsewhere since the last fetch; skipped on the first fetch, there's nothing to compare
+		if (feature.fetched) {
+			feature.videos.forEach(function (videoId) {
+				if (!ids.has(videoId)) {
+					feature.markSeen(videoId);
+				}
+			});
+		}
+
+		feature.fetched = true;
 		feature.videos = ids;
 		feature.show(feature.thumbnail, feature.top, feature.left);
 		extension.features.dimThumbnails.all(document);
@@ -783,13 +793,27 @@ extension.features.watchLaterButton.refresh = function () {
 // Also marked seen, so it stays dimmed once removed from Watch Later
 extension.features.watchLaterButton.added = function (videoId) {
 	this.videos.add(videoId);
+	this.markSeen(videoId);
+	this.show(this.thumbnail, this.top, this.left);
+	extension.features.dimThumbnails.all(document);
+};
 
+// Removed with the R shortcut or the Remove button while watching from Watch Later
+extension.features.watchLaterButton.removed = function (videoId) {
+	if (!videoId) {
+		return;
+	}
+
+	this.videos.delete(videoId);
+	this.markSeen(videoId);
+	this.show(this.thumbnail, this.top, this.left);
+	extension.features.dimThumbnails.all(document);
+};
+
+extension.features.watchLaterButton.markSeen = function (videoId) {
 	if (extension.features.trackSeenVideos.enabled === true) {
 		extension.features.trackSeenVideos.set(videoId, true);
 	}
-
-	this.show(this.thumbnail, this.top, this.left);
-	extension.features.dimThumbnails.all(document);
 };
 
 /*--------------------------------------------------------------
