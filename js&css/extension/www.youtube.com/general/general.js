@@ -521,6 +521,12 @@ extension.features.innertube = function (endpoint, body) {
 
 // Calls the add endpoint directly: YouTube's own buttons toggle, and would remove videos already saved
 extension.features.addToWatchLater = function (videoId) {
+	var feature = extension.features.watchLaterButton,
+		known = feature.videos.has(videoId);
+
+	// Dims right away instead of after the request, which takes a couple of seconds
+	feature.added(videoId);
+
 	return extension.features.innertube('browse/edit_playlist', {
 		playlistId: 'WL',
 		actions: [{ action: 'ACTION_ADD_VIDEO', addedVideoId: videoId }]
@@ -529,7 +535,14 @@ extension.features.addToWatchLater = function (videoId) {
 			return Promise.reject(data.status);
 		}
 
-		extension.features.watchLaterButton.added(videoId);
+		feature.markSeen(videoId);
+	}).catch(function (error) {
+		if (!known) {
+			feature.videos.delete(videoId);
+			feature.render();
+		}
+
+		return Promise.reject(error);
 	});
 };
 
@@ -794,9 +807,7 @@ extension.features.watchLaterButton.refresh = function () {
 // Also marked seen, so it stays dimmed once removed from Watch Later
 extension.features.watchLaterButton.added = function (videoId) {
 	this.videos.add(videoId);
-	this.markSeen(videoId);
-	this.show(this.thumbnail, this.top, this.left);
-	extension.features.dimThumbnails.all(document);
+	this.render();
 };
 
 // Removed with the R shortcut or the Remove button while watching from Watch Later
@@ -807,6 +818,10 @@ extension.features.watchLaterButton.removed = function (videoId) {
 
 	this.videos.delete(videoId);
 	this.markSeen(videoId);
+	this.render();
+};
+
+extension.features.watchLaterButton.render = function () {
 	this.show(this.thumbnail, this.top, this.left);
 	extension.features.dimThumbnails.all(document);
 };
@@ -851,14 +866,15 @@ extension.features.dimThumbnails = function () {
 	feature.all(document);
 };
 
-extension.features.dimThumbnails.LINKS = 'a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage';
+// The hover preview is an overlay outside the card, so it's dimmed by its own link
+extension.features.dimThumbnails.LINKS = 'a#thumbnail, a.thumb-link, a.ytLockupViewModelContentImage, ytd-video-preview a.ytdVideoPreviewMediaContainerLink, ytd-video-preview a#media-container-link';
 
 extension.features.dimThumbnails.dim = function (link) {
 	if (!(link instanceof Element) || !link.matches(this.LINKS)) {
 		return;
 	}
 
-	var card = link.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model'),
+	var card = link.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-compact-video-renderer, yt-lockup-view-model, ytd-video-preview'),
 		match = link.href && link.href.match(/(?:[?&]v=|\/shorts\/)([a-zA-Z0-9_-]{11})/);
 
 	if (card) {

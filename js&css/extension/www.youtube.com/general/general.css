@@ -686,8 +686,40 @@ html[it-track-seen-videos='true'] [it-seen] {
 	opacity: .3;
 }
 
-html[it-watch-later-button='true'] [it-in-watch-later] {
-	opacity: .7;
+/* Dims everything except the thumbnail box itself, so its border stays at full strength */
+html[it-watch-later-button='true'] :is([it-in-watch-later]:not(ytd-video-preview), [it-in-watch-later] :has(yt-thumbnail-view-model, ytd-thumbnail), [it-in-watch-later] :is(yt-thumbnail-view-model, ytd-thumbnail)) > :not(yt-thumbnail-view-model, ytd-thumbnail, :has(yt-thumbnail-view-model, ytd-thumbnail)) {
+	opacity: .3;
+}
+
+html[it-watch-later-button='true'] [it-in-watch-later] :is(yt-thumbnail-view-model, ytd-thumbnail),
+html[it-watch-later-button='true'] ytd-video-preview[it-in-watch-later] > * {
+	outline: 1px solid #2ecc71;
+	outline-offset: 2px;
+	border-radius: 12px;
+}
+
+/* The preview overlays the dimmed card, so it gets an opaque backdrop and only its content is dimmed */
+html[it-track-seen-videos='true'] ytd-video-preview[it-seen] {
+	opacity: 1;
+}
+
+html[it-track-seen-videos='true'] ytd-video-preview[it-seen] > *,
+html[it-watch-later-button='true'] ytd-video-preview[it-in-watch-later] > * {
+	border-radius: 12px;
+	background: #fff;
+}
+
+html[dark][it-track-seen-videos='true'] ytd-video-preview[it-seen] > *,
+html[dark][it-watch-later-button='true'] ytd-video-preview[it-in-watch-later] > * {
+	background: #0f0f0f;
+}
+
+html[it-track-seen-videos='true'] ytd-video-preview[it-seen] > * > * {
+	opacity: .3;
+}
+
+html[it-watch-later-button='true'] ytd-video-preview[it-in-watch-later] > * > * {
+	opacity: .3;
 }
 
 /*--------------------------------------------------------------

@@ -44,9 +44,9 @@ describe('Track seen videos', () => {
 		expect(generalJs).toContain('page({ continuation: token })');
 		expect(generalJs).not.toContain('watch_later_videos');
 		expect(generalJs).toContain('extension.features.watchLaterButton.refresh = function');
-		expect(generalJs).toContain('extension.features.watchLaterButton.added(videoId);');
+		expect(generalJs).toContain('feature.added(videoId);');
 		expect(generalCss).toContain("html[it-watch-later-button='true'] [it-in-watch-later]");
-		expect(generalCss).toContain('opacity: .7');
+		expect(generalCss).toContain('outline: 1px solid #2ecc71');
 	});
 
 	test('marks saved videos seen and checks Watch Later first when dimming', () => {
