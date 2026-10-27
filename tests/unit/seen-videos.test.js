@@ -49,6 +49,14 @@ describe('Track seen videos', () => {
 		expect(generalCss).toContain('outline: 1px solid #2ecc71');
 	});
 
+	test('dims around the Watch Later thumbnail without :has(), which restyles the whole page on every change', () => {
+		const block = generalCss.slice(generalCss.indexOf('# Dimmed thumbnails'), generalCss.indexOf('opacity: .3;', generalCss.indexOf("[it-in-watch-later] yt-thumbnail-view-model > *")));
+
+		expect(generalJs).toContain("node.setAttribute('it-thumbnail-path', '');");
+		expect(block).toContain('[it-thumbnail-path]');
+		expect(block).not.toContain(':has(yt-thumbnail-view-model');
+	});
+
 	test('marks saved videos seen and checks Watch Later first when dimming', () => {
 		expect(generalJs).toContain('extension.features.trackSeenVideos.set(videoId, true);');
 		expect(generalJs).toContain('seen = !watchLater && ');

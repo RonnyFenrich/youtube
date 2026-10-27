@@ -884,6 +884,13 @@ extension.features.dimThumbnails.dim = function (link) {
 
 		card.toggleAttribute('it-in-watch-later', watchLater);
 		card.toggleAttribute('it-seen', seen);
+
+		// Lets the CSS dim around the thumbnail without :has()
+		if (card.localName !== 'ytd-video-preview') {
+			for (var node = link; node !== card && !node.hasAttribute('it-thumbnail-path'); node = node.parentElement) {
+				node.setAttribute('it-thumbnail-path', '');
+			}
+		}
 	}
 };
 

@@ -716,8 +716,11 @@ html[it-track-seen-videos='true'] [it-seen] {
 	opacity: .3;
 }
 
-/* Dims everything except the thumbnail box itself, so its border stays at full strength */
-html[it-watch-later-button='true'] :is([it-in-watch-later]:not(ytd-video-preview), [it-in-watch-later] :has(yt-thumbnail-view-model, ytd-thumbnail), [it-in-watch-later] :is(yt-thumbnail-view-model, ytd-thumbnail)) > :not(yt-thumbnail-view-model, ytd-thumbnail, :has(yt-thumbnail-view-model, ytd-thumbnail)) {
+/* Dims everything except the thumbnail box itself, so its border stays at full strength.
+   JS marks the path to the thumbnail, as :has() here made every DOM change restyle the page */
+html[it-watch-later-button='true'] [it-in-watch-later]:not(ytd-video-preview) > :not([it-thumbnail-path]),
+html[it-watch-later-button='true'] [it-in-watch-later] [it-thumbnail-path] > :not([it-thumbnail-path], yt-thumbnail-view-model),
+html[it-watch-later-button='true'] [it-in-watch-later] yt-thumbnail-view-model > * {
 	opacity: .3;
 }
 
