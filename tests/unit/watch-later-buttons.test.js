@@ -34,7 +34,9 @@ describe('Watch Later thumbnail buttons', () => {
 
 	test('thumbnail button is one shared element that stays visible under the hover preview', () => {
 		expect(generalJs).toContain('extension.features.watchLaterButton.show = function');
-		expect(generalJs).toContain("target.closest('ytd-video-preview')");
+		// The preview's wrapper divs live in #video-preview, outside ytd-video-preview
+		expect(generalJs).toContain("target.closest('#video-preview, ytd-video-preview')");
+		expect(generalJs).toContain("!element.closest('#video-preview, ytd-video-preview')");
 		expect(generalCss).not.toContain('*:hover>.it-thumb-wl-button');
 	});
 

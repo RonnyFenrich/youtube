@@ -558,9 +558,10 @@ extension.features.thumbnailButtons = function (event) {
 			return;
 		}
 
-		if (target.closest('ytd-video-preview')) {
+		// The preview now sits in wrapper divs inside #video-preview, which aren't part of the thumbnail either
+		if (target.closest('#video-preview, ytd-video-preview')) {
 			target = document.elementsFromPoint(event.clientX, event.clientY).find(function (element) {
-				return !element.closest('ytd-video-preview');
+				return !element.closest('#video-preview, ytd-video-preview');
 			});
 		}
 
