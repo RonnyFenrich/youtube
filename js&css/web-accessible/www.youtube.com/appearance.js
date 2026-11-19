@@ -766,10 +766,13 @@ ImprovedTube.removeFromPlaylist = function () {
 			for (var i = 0; i < menuItems.length; i++) {
 				if (menuItems[i].textContent.includes('Remove from')) {
 					menuItems[i].click();
-					// The content script marks it seen
-					if (params.get('list') === 'WL') {
-						ImprovedTube.messages.send({action: 'removed-from-watch-later', videoId: params.get('v')});
-					}
+					// The content script shows the toast and, for Watch Later, marks it seen
+					ImprovedTube.messages.send({
+						action: 'removed-from-playlist',
+						videoId: params.get('v'),
+						watchLater: params.get('list') === 'WL',
+						text: menuItems[i].textContent.trim().replace(/^Remove from/, 'Removed from')
+					});
 					break;
 				}
 			}

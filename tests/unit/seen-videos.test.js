@@ -66,8 +66,9 @@ describe('Track seen videos', () => {
 		const appearanceJs = fs.readFileSync(path.join(__dirname, '../../js&css/web-accessible/www.youtube.com/appearance.js'), 'utf8');
 		const initJs = fs.readFileSync(path.join(__dirname, '../../js&css/extension/init.js'), 'utf8');
 
-		expect(appearanceJs).toContain("ImprovedTube.messages.send({action: 'removed-from-watch-later', videoId: params.get('v')});");
+		expect(appearanceJs).toContain("watchLater: params.get('list') === 'WL',");
 		expect(initJs).toContain('extension.features.watchLaterButton.removed(message.videoId);');
+		expect(initJs).toContain("extension.features.thumbnailButtons.toast(message.text || 'Removed from playlist', message.videoId);");
 		expect(generalJs).toContain('this.videos.delete(videoId);');
 		expect(generalJs).toContain('if (!ids.has(videoId)) {');
 	});
